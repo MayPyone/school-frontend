@@ -1,8 +1,8 @@
-import { 
-  School, 
-  BookOpen, 
-  Calendar, 
-  Users, 
+import {
+  School,
+  BookOpen,
+  Calendar,
+  Users,
   Image,
   LayoutDashboard,
   Menu,
@@ -34,14 +34,13 @@ export function RootLayout({ children, currentPage, onNavigate }: RootLayoutProp
     <div className="flex h-screen">
       {/* Sidebar */}
       <aside
-        className={`${
-          sidebarOpen ? "w-64" : "w-28"
-        } border-r border-gray-100/15 transition-all duration-300 overflow-hidden`}
+        className={`${sidebarOpen ? "w-64" : "w-28"
+          } border-r border-gray-100/15 transition-all duration-300 overflow-hidden`}
       >
-        <div className="p-6" onClick={() => setSidebarOpen(!sidebarOpen)}>
-          <div className={`flex justify-center items-center gap-2 mb-8`}>
-            <School className="w-8 h-8 text-blue-600" />
-           {sidebarOpen && <h1 className="text-xl font-semibold">SchoolManager</h1>}
+        <div className="p-6">
+          <div className={`flex justify-center items-center gap-2 mb-8`} onClick={() => setSidebarOpen(!sidebarOpen)}>
+            <School className="w-8 h-8 " />
+            {sidebarOpen && <h1 className="text-xl font-semibold">SchoolManager</h1>}
           </div>
 
           <nav className="space-y-6">
@@ -51,11 +50,10 @@ export function RootLayout({ children, currentPage, onNavigate }: RootLayoutProp
                 <button
                   key={item.id}
                   onClick={() => onNavigate(item.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                    currentPage === item.id
-                      ? "bg-blue-50 text-blue-600"
-                      : "text-gray-700 hover:bg-gray-50"
-                  }`}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${currentPage === item.id
+                    ? ""
+                    : " hover:bg-gray-50"
+                    }`}
                 >
                   <Icon className="w-5 h-5" />
                   {sidebarOpen && item.label}
@@ -72,7 +70,7 @@ export function RootLayout({ children, currentPage, onNavigate }: RootLayoutProp
         <header className="border-b border-gray-100/15 px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-             
+
               <h2 className="text-2xl font-semibold capitalize">
                 {menuItems.find((item) => item.id === currentPage)?.label || "Dashboard"}
               </h2>
