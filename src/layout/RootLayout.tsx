@@ -37,7 +37,7 @@ export function RootLayout({ children, currentPage, onNavigate }: RootLayoutProp
         className={`${sidebarOpen ? "w-64" : "w-28"
           } border-r border-gray-100/15 transition-all duration-300 overflow-hidden`}
       >
-        <div className="p-6">
+        <div className="p-6" >
           <div className={`flex justify-center items-center gap-2 mb-8`} onClick={() => setSidebarOpen(!sidebarOpen)}>
             <School className="w-8 h-8 " />
             {sidebarOpen && <h1 className="text-xl font-semibold">SchoolManager</h1>}
@@ -51,8 +51,8 @@ export function RootLayout({ children, currentPage, onNavigate }: RootLayoutProp
                   key={item.id}
                   onClick={() => onNavigate(item.id)}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${currentPage === item.id
-                    ? ""
-                    : " hover:bg-gray-50"
+                      ? ""
+                      : " hover:bg-gray-50"
                     }`}
                 >
                   <Icon className="w-5 h-5" />
