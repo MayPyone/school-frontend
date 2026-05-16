@@ -1,28 +1,102 @@
-import { useState } from "react";
 import "./App.css";
+import { useEffect, useState } from "react";
+import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { ProtectedRoute } from "./components/dashboard/ProtectedRoute";
 import { RootLayout } from "./layout/RootLayout";
 import ActivityPage from "./pages/activity/ActivityPage";
-import StaffPage from "./pages/staff/StaffPage";
-import SchedulePage from "./pages/schedule/SchedulePage";
+import LoginPage from "./pages/auth/LoginPage";
+import SignupPage from "./pages/auth/SignupPage";
 import LessonPage from "./pages/lesson/LessonPage";
+import OverviewPage from "./pages/overview/OverviewPage";
+import SchedulePage from "./pages/schedule/SchedulePage";
+import SchoolsPage from "./pages/schools/SchoolsPage";
+import StaffPage from "./pages/staff/StaffPage";
+import { authService } from "./services/authService";
+import { schoolService } from "./services/schoolService";
+import type { School, UUID } from "./types/api";
 
-function App() {
-  const [currentPage, setCurrentPage] = useState("overview");
+const pagePaths: Record<string, string> = {
+  overview: "/",
+  schools: "/schools",
+  lessons: "/lessons",
+  schedules: "/schedules",
+  staff: "/staff",
+  activities: "/activities",
+};
+
+function DashboardShell() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [schools, setSchools] = useState<School[]>([]);
+  const [selectedSchoolId, setSelectedSchoolId] = useState<UUID>("");
+  const [schoolsLoading, setSchoolsLoading] = useState(true);
+
+  const currentPage =
+    Object.entries(pagePaths).find(([, path]) => path === location.pathname)?.[0] ?? "overview";
+
+  useEffect(() => {
+    async function loadSchools() {
+      setSchoolsLoading(true);
+      try {
+        const loadedSchools = await schoolService.list();
+        setSchools(loadedSchools);
+        const storedSchoolId = window.localStorage.getItem("school-dashboard-selected-school");
+        const nextSchoolId =
+          loadedSchools.find((school) => school.id === storedSchoolId)?.id ??
+          loadedSchools[0]?.id ??
+          "";
+        setSelectedSchoolId(nextSchoolId);
+      } finally {
+        setSchoolsLoading(false);
+      }
+    }
+
+    void loadSchools();
+  }, []);
+
+  function handleSchoolChange(schoolId: UUID) {
+    setSelectedSchoolId(schoolId);
+    window.localStorage.setItem("school-dashboard-selected-school", schoolId);
+  }
+
+  async function handleLogout() {
+    await authService.logout();
+    navigate("/login", { replace: true });
+  }
 
   return (
     <RootLayout
       currentPage={currentPage}
-      onNavigate={setCurrentPage}
+      onNavigate={(page) => navigate(pagePaths[page] ?? "/")}
+      schools={schools}
+      selectedSchoolId={selectedSchoolId}
+      onSchoolChange={handleSchoolChange}
+      schoolsLoading={schoolsLoading}
+      onLogout={handleLogout}
     >
-      <div className="text-lg">
-        {currentPage === "overview" && <p>Overview Page</p>}
-        {currentPage === "schools" && <p>Schools Page</p>}
-        {currentPage === "lessons" && <LessonPage />}
-        {currentPage === "schedules" && <SchedulePage />}
-        {currentPage === "staff" && <StaffPage />}
-        {currentPage === "activities" && <ActivityPage />}
-      </div>
+      <Routes>
+        <Route index element={<OverviewPage />} />
+        <Route path="schools" element={<SchoolsPage />} />
+        <Route path="lessons" element={<LessonPage schools={schools} selectedSchoolId={selectedSchoolId} />} />
+        <Route path="lessons/:lessonId/units" element={<LessonPage schools={schools} selectedSchoolId={selectedSchoolId} />} />
+        <Route path="schedules" element={<SchedulePage selectedSchoolId={selectedSchoolId} />} />
+        <Route path="staff" element={<StaffPage schools={schools} selectedSchoolId={selectedSchoolId} />} />
+        <Route path="activities" element={<ActivityPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </RootLayout>
+  );
+}
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/signup" element={<SignupPage />} />
+      <Route element={<ProtectedRoute />}>
+        <Route path="/*" element={<DashboardShell />} />
+      </Route>
+    </Routes>
   );
 }
 
