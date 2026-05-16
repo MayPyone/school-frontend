@@ -96,13 +96,13 @@ export default function SchedulePage({ selectedSchoolId }: SchedulePageProps) {
       {schedulesState.loading ? <LoadingState label="Checking schedule endpoints" /> : null}
       {schedulesState.error ? <div className="mb-5"><ErrorState error={schedulesState.error} /></div> : null}
 
-      <div className="grid gap-4 lg:grid-cols-7">
+      <div className="flex flex-col gap-4">
         {days.map((day) => {
           const daySchedules = schedules.filter((schedule) => schedule.dayOfWeek === day);
           return (
-            <Panel key={day} className="min-h-48 p-4">
+            <Panel key={day} className="min-w-64 flex-1 basis-72 p-4">
               <h2 className="text-sm font-semibold text-slate-950">{day.slice(0, 3)}</h2>
-              <div className="mt-3 space-y-3">
+              <div className="mt-3 space-y-3 flex flex-wrap gap-4">
                 {daySchedules.map((schedule) => (
                   <div key={schedule.id} className="rounded-md border border-slate-200 p-3 text-sm">
                     <div className="flex items-center justify-between gap-2">
