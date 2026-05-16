@@ -11,10 +11,10 @@ interface ModalProps {
 
 export function Modal({ title, children, onClose }: ModalProps) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-[1px]">
-      <div className={cn("max-h-[90vh] w-full max-w-2xl overflow-auto rounded-md border border-slate-200 bg-white shadow-xl")}>
-        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-          <h2 className="text-lg font-semibold text-slate-950">{title}</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-[1px] dark:bg-black/60">
+      <div className={cn("max-h-[90vh] w-full max-w-2xl overflow-auto rounded-md border border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900")}>
+        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-800">
+          <h2 className="text-lg font-semibold text-slate-950 dark:text-slate-50">{title}</h2>
           <Button
             type="button"
             variant="ghost"

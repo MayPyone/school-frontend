@@ -15,6 +15,8 @@ import { authService } from "./services/authService";
 import { schoolService } from "./services/schoolService";
 import type { School, UUID } from "./types/api";
 
+type ThemeMode = "light" | "dark";
+
 const pagePaths: Record<string, string> = {
   overview: "/",
   schools: "/schools",
@@ -24,7 +26,12 @@ const pagePaths: Record<string, string> = {
   activities: "/activities",
 };
 
-function DashboardShell() {
+interface DashboardShellProps {
+  theme: ThemeMode;
+  onThemeToggle: () => void;
+}
+
+function DashboardShell({ theme, onThemeToggle }: DashboardShellProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [schools, setSchools] = useState<School[]>([]);
@@ -73,6 +80,8 @@ function DashboardShell() {
       onSchoolChange={handleSchoolChange}
       schoolsLoading={schoolsLoading}
       onLogout={handleLogout}
+      theme={theme}
+      onThemeToggle={onThemeToggle}
     >
       <Routes>
         <Route index element={<OverviewPage />} />
@@ -89,12 +98,34 @@ function DashboardShell() {
 }
 
 function App() {
+  const [theme, setTheme] = useState<ThemeMode>(() => {
+    const storedTheme = window.localStorage.getItem("school-dashboard-theme");
+    if (storedTheme === "dark" || storedTheme === "light") {
+      return storedTheme;
+    }
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  });
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", theme === "dark");
+    document.documentElement.style.colorScheme = theme;
+    window.localStorage.setItem("school-dashboard-theme", theme);
+  }, [theme]);
+
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
       <Route element={<ProtectedRoute />}>
-        <Route path="/*" element={<DashboardShell />} />
+        <Route
+          path="/*"
+          element={
+            <DashboardShell
+              theme={theme}
+              onThemeToggle={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
+            />
+          }
+        />
       </Route>
     </Routes>
   );
