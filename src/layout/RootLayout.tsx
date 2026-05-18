@@ -66,7 +66,7 @@ export function RootLayout({
         <div className="p-6" >
           <button
             type="button"
-            className="mb-8 flex w-full items-center justify-center gap-2 rounded-lg bg-transparent p-0 text-slate-900 hover:bg-slate-50 dark:text-slate-100 dark:hover:bg-slate-900"
+            className="mb-8 flex w-full items-center justify-center gap-2 rounded-lg bg-transparent p-0 text-slate-900 transition-[background-color,transform] duration-150 hover:bg-slate-50 active:scale-[0.98] active:bg-slate-100 dark:text-slate-100 dark:hover:bg-slate-900 dark:active:bg-slate-800"
             onClick={() => setSidebarOpen(!sidebarOpen)}
           >
             <School className="w-8 h-8 " />
@@ -110,9 +110,10 @@ export function RootLayout({
                 <button
                   key={item.id}
                   onClick={() => onNavigate(item.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${currentPage === item.id
-                    ? "bg-slate-100 text-slate-950 dark:bg-slate-900 dark:text-slate-50"
-                    : "text-slate-700 hover:bg-gray-50 dark:text-slate-300 dark:hover:bg-slate-900"
+                  aria-current={currentPage === item.id ? "page" : undefined}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-transparent transition-[background-color,border-color,box-shadow,transform,color] duration-150 active:scale-[0.98] ${currentPage === item.id
+                    ? "border-slate-200 bg-slate-100 text-slate-950 shadow-sm hover:bg-slate-200 active:bg-slate-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-50 dark:hover:bg-slate-800 dark:active:bg-slate-800"
+                    : "text-slate-700 hover:border-slate-200 hover:bg-gray-50 hover:text-slate-950 hover:shadow-sm active:bg-slate-100 dark:text-slate-300 dark:hover:border-slate-800 dark:hover:bg-slate-900 dark:hover:text-slate-50 dark:active:bg-slate-800"
                     }`}
                 >
                   <Icon className="w-5 h-5" />
@@ -138,7 +139,7 @@ export function RootLayout({
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-200 text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-900"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-200 text-slate-700 shadow-sm transition-[background-color,border-color,box-shadow,transform] duration-150 hover:border-slate-300 hover:bg-slate-50 hover:shadow-md active:scale-[0.98] active:bg-slate-100 active:shadow-sm dark:border-slate-700 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-900 dark:active:bg-slate-800"
                 onClick={onThemeToggle}
                 aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
                 title={theme === "dark" ? "Light mode" : "Dark mode"}
@@ -147,7 +148,7 @@ export function RootLayout({
               </button>
               <button
                 type="button"
-                className="inline-flex items-center gap-2 rounded-md border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-900"
+                className="inline-flex items-center gap-2 rounded-md border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition-[background-color,border-color,box-shadow,transform] duration-150 hover:border-slate-300 hover:bg-slate-50 hover:shadow-md active:scale-[0.98] active:bg-slate-100 active:shadow-sm dark:border-slate-700 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-900 dark:active:bg-slate-800"
                 onClick={() => void onLogout()}
               >
                 <LogOut className="h-4 w-4" aria-hidden="true" />

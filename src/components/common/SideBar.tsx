@@ -51,10 +51,11 @@ export function DashboardLayout({ children, currentPage, onNavigate }: Dashboard
                 <button
                   key={item.id}
                   onClick={() => onNavigate(item.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                  aria-current={currentPage === item.id ? "page" : undefined}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg border border-transparent transition-[background-color,border-color,box-shadow,transform,color] duration-150 active:scale-[0.98] ${
                     currentPage === item.id
-                      ? "bg-blue-50 text-blue-600"
-                      : "text-gray-700 hover:bg-gray-50"
+                      ? "border-blue-100 bg-blue-50 text-blue-700 shadow-sm hover:bg-blue-100 active:bg-blue-100"
+                      : "text-gray-700 hover:border-gray-200 hover:bg-gray-50 hover:text-gray-950 hover:shadow-sm active:bg-gray-100"
                   }`}
                 >
                   <Icon className="w-5 h-5" />

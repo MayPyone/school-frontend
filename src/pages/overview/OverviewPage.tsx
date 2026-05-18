@@ -47,8 +47,11 @@ export default function OverviewPage() {
         actions={
           <>
             <Link className={primaryButtonClass} to="/schools">
-              <Plus className="h-4 w-4" aria-hidden="true" />
-              Add school
+
+              <button type="button" className={primaryButtonClass}>
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                Add School
+              </button>
             </Link>
             <Link className={secondaryButtonClass} to="/lessons">Manage lessons</Link>
           </>

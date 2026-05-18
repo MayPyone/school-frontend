@@ -1,7 +1,7 @@
 import axios, { AxiosError } from "axios";
 import type { ApiError, AuthResponse, User } from "../types/api";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api/v1";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const AUTH_STORAGE_KEY = "school-dashboard-auth";
 const LEGACY_USER_STORAGE_KEY = "school-dashboard-user";
 const SESSION_EXPIRED_REASON = "session-expired";
