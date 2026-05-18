@@ -1,5 +1,5 @@
 import "./App.css";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { ProtectedRoute } from "./components/dashboard/ProtectedRoute";
 import { RootLayout } from "./layout/RootLayout";
@@ -41,25 +41,36 @@ function DashboardShell({ theme, onThemeToggle }: DashboardShellProps) {
   const currentPage =
     Object.entries(pagePaths).find(([, path]) => path === location.pathname)?.[0] ?? "overview";
 
-  useEffect(() => {
-    async function loadSchools() {
-      setSchoolsLoading(true);
-      try {
-        const loadedSchools = await schoolService.list();
-        setSchools(loadedSchools);
+  const refreshSchools = useCallback(async () => {
+    setSchoolsLoading(true);
+    try {
+      const loadedSchools = await schoolService.list();
+      setSchools(loadedSchools);
+      setSelectedSchoolId((currentSchoolId) => {
         const storedSchoolId = window.localStorage.getItem("school-dashboard-selected-school");
         const nextSchoolId =
+          loadedSchools.find((school) => school.id === currentSchoolId)?.id ??
           loadedSchools.find((school) => school.id === storedSchoolId)?.id ??
           loadedSchools[0]?.id ??
           "";
-        setSelectedSchoolId(nextSchoolId);
-      } finally {
-        setSchoolsLoading(false);
-      }
-    }
 
-    void loadSchools();
+        if (nextSchoolId) {
+          window.localStorage.setItem("school-dashboard-selected-school", nextSchoolId);
+        } else {
+          window.localStorage.removeItem("school-dashboard-selected-school");
+        }
+
+        return nextSchoolId;
+      });
+      return loadedSchools;
+    } finally {
+      setSchoolsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void refreshSchools();
+  }, [refreshSchools]);
 
   function handleSchoolChange(schoolId: UUID) {
     setSelectedSchoolId(schoolId);
@@ -85,12 +96,12 @@ function DashboardShell({ theme, onThemeToggle }: DashboardShellProps) {
     >
       <Routes>
         <Route index element={<OverviewPage />} />
-        <Route path="schools" element={<SchoolsPage />} />
+        <Route path="schools" element={<SchoolsPage loadSchools={refreshSchools} />} />
         <Route path="lessons" element={<LessonPage schools={schools} selectedSchoolId={selectedSchoolId} />} />
         <Route path="lessons/:lessonId/units" element={<LessonPage schools={schools} selectedSchoolId={selectedSchoolId} />} />
         <Route path="schedules" element={<SchedulePage selectedSchoolId={selectedSchoolId} />} />
         <Route path="staff" element={<StaffPage schools={schools} selectedSchoolId={selectedSchoolId} />} />
-        <Route path="activities" element={<ActivityPage />} />
+        <Route path="activities" element={<ActivityPage selectedSchoolId={selectedSchoolId} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </RootLayout>
@@ -118,7 +129,16 @@ function App() {
       <Route path="/signup" element={<SignupPage />} />
       <Route element={<ProtectedRoute />}>
         <Route
-          path="/*"
+          index
+          element={
+            <DashboardShell
+              theme={theme}
+              onThemeToggle={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
+            />
+          }
+        />
+        <Route
+          path="*"
           element={
             <DashboardShell
               theme={theme}

@@ -1,11 +1,13 @@
-import type { ImageUploadPresignResponse } from "../types/api";
+import type { ImageUploadPresignResponse, UUID } from "../types/api";
 import { resizeImageFile } from "../lib/imageResize";
 import { api } from "./http";
 
 interface UploadImageOptions {
   folder: string;
+  schoolId?: UUID;
   maxWidth?: number;
   maxHeight?: number;
+  maxSizeBytes?: number;
 }
 
 export const uploadService = {
@@ -13,13 +15,16 @@ export const uploadService = {
     const resizedFile = await resizeImageFile(file, {
       maxWidth: options.maxWidth,
       maxHeight: options.maxHeight,
+      maxSizeBytes: options.maxSizeBytes,
       outputType: "image/webp",
     });
+    const folder = options.schoolId ? `${options.folder}/${options.schoolId}` : options.folder;
 
     const { data } = await api.post<ImageUploadPresignResponse>("/uploads/images/presign", {
       originalFilename: resizedFile.name,
       contentType: resizedFile.type,
-      folder: options.folder,
+      folder,
+      schoolId: options.schoolId,
     });
 
     const response = await fetch(data.uploadUrl, {
@@ -35,5 +40,11 @@ export const uploadService = {
     }
 
     return data.publicUrl;
+  },
+
+  async deleteImage(publicUrl: string): Promise<void> {
+    await api.delete("/uploads/images", {
+      params: { publicUrl },
+    });
   },
 };

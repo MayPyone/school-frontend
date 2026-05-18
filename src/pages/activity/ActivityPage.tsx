@@ -30,7 +30,11 @@ const defaultForm = {
   images: [] as string[],
 };
 
-export default function ActivityPage() {
+interface ActivityPageProps {
+  selectedSchoolId: UUID;
+}
+
+export default function ActivityPage({ selectedSchoolId }: ActivityPageProps) {
   const activitiesState = useAsyncData(() => activityService.list(), []);
   const schoolsState = useAsyncData(() => schoolService.list(), []);
   const [formOpen, setFormOpen] = useState(false);
@@ -57,10 +61,13 @@ export default function ActivityPage() {
     });
   }, [activities, filter]);
 
+
+
   function openCreate() {
     setEditingActivity(null);
     setSelectedActivity(null);
-    setForm(defaultForm);
+    const defaultSchoolId = selectedSchoolId || schoolsState.data?.[0]?.id || "";
+    setForm({ ...defaultForm, schoolId: defaultSchoolId });
     setSubmitError("");
     setFormOpen(true);
   }

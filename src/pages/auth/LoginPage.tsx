@@ -18,10 +18,14 @@ interface LocationState {
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const sessionExpired = searchParams.get("reason") === "session-expired";
+  const returnTo = searchParams.get("from");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const message = error || (sessionExpired ? "Your session timed out. Please log in again." : "");
 
   if (getStoredUser()) {
     return <Navigate to="/" replace />;
@@ -35,7 +39,7 @@ export default function LoginPage() {
     try {
       await authService.login({ email, password });
       const state = location.state as LocationState | null;
-      navigate(state?.from?.pathname ?? "/", { replace: true });
+      navigate(state?.from?.pathname ?? (returnTo?.startsWith("/") ? returnTo : "/"), { replace: true });
     } catch (requestError) {
       setError(toApiError(requestError).message);
     } finally {
@@ -56,7 +60,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {error ? <p className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
+        {message ? <p className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{message}</p> : null}
 
         <div className="space-y-4">
           <Field label="Email">

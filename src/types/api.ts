@@ -183,6 +183,7 @@ export interface ImageUploadPresignRequest {
   originalFilename: string;
   contentType: string;
   folder?: string;
+  schoolId?: UUID;
 }
 
 export interface ImageUploadPresignResponse {

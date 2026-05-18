@@ -4,6 +4,7 @@ import type { ApiError, AuthResponse, User } from "../types/api";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api/v1";
 const AUTH_STORAGE_KEY = "school-dashboard-auth";
 const LEGACY_USER_STORAGE_KEY = "school-dashboard-user";
+const SESSION_EXPIRED_REASON = "session-expired";
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -19,6 +20,25 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (axios.isAxiosError(error) && error.response?.status === 401) {
+      const hadAuth = Boolean(window.localStorage.getItem(AUTH_STORAGE_KEY));
+      clearStoredUser();
+
+      if (hadAuth && window.location.pathname !== "/login") {
+        const loginUrl = new URL("/login", window.location.origin);
+        loginUrl.searchParams.set("reason", SESSION_EXPIRED_REASON);
+        loginUrl.searchParams.set("from", `${window.location.pathname}${window.location.search}`);
+        window.location.assign(loginUrl.toString());
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
 
 export function getStoredUser(): User | null {
   const raw = window.localStorage.getItem(AUTH_STORAGE_KEY);

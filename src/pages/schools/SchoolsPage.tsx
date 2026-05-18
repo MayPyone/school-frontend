@@ -54,14 +54,19 @@ function toPayload(form: SchoolFormState): Omit<SchoolRequest, "userId"> {
   };
 }
 
-export default function SchoolsPage() {
-  const { data, loading, error, reload, setData, setError } = useAsyncData(() => schoolService.list(), []);
+interface SchoolsPageProps {
+  loadSchools?: () => Promise<School[]>;
+}
+
+export default function SchoolsPage({ loadSchools = schoolService.list }: SchoolsPageProps) {
+  const { data, loading, error, reload, setData, setError } = useAsyncData(() => loadSchools(), [loadSchools]);
   const [query, setQuery] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [editingSchool, setEditingSchool] = useState<School | null>(null);
   const [form, setForm] = useState(defaultForm);
   const [submitting, setSubmitting] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [pendingUploadedLogos, setPendingUploadedLogos] = useState<string[]>([]);
 
   const schools = data ?? [];
   const filteredSchools = useMemo(
@@ -76,12 +81,14 @@ export default function SchoolsPage() {
   function openCreate() {
     setEditingSchool(null);
     setForm(defaultForm);
+    setPendingUploadedLogos([]);
     setFormOpen(true);
   }
 
   function openEdit(school: School) {
     setEditingSchool(school);
     setForm(toForm(school));
+    setPendingUploadedLogos([]);
     setFormOpen(true);
   }
 
@@ -93,18 +100,18 @@ export default function SchoolsPage() {
     try {
       const payload = toPayload(form);
       if (editingSchool) {
-        const updated = await schoolService.update(editingSchool.id, payload);
-        setData(schools.map((school) => (school.id === updated.id ? updated : school)));
+        await schoolService.update(editingSchool.id, payload);
       } else {
         const user = getStoredUser();
         if (!user?.id) {
           throw new Error("A logged-in user is required to create a school.");
         }
-        const created = await schoolService.create({ ...payload, userId: user.id });
-        setData([created, ...schools]);
+        await schoolService.create({ ...payload, userId: user.id });
       }
+      setData(await loadSchools());
       setEditingSchool(null);
       setForm(defaultForm);
+      setPendingUploadedLogos([]);
       setFormOpen(false);
     } catch (requestError) {
       setError(toApiError(requestError));
@@ -121,7 +128,7 @@ export default function SchoolsPage() {
 
     try {
       await schoolService.remove(school.id);
-      setData(schools.filter((item) => item.id !== school.id));
+      setData(await loadSchools());
     } catch (requestError) {
       setError(toApiError(requestError));
     }
@@ -138,14 +145,31 @@ export default function SchoolsPage() {
     try {
       const logoUrl = await uploadService.uploadImage(file, {
         folder: "school-logos",
+        schoolId: editingSchool?.id,
         maxWidth: 800,
         maxHeight: 800,
+        maxSizeBytes: 300 * 1024,
       });
+      setPendingUploadedLogos((current) => [logoUrl, ...current]);
       setForm((current) => ({ ...current, logoUrl }));
     } catch (requestError) {
       setError(toApiError(requestError));
     } finally {
       setUploadingLogo(false);
+    }
+  }
+
+  async function closeForm() {
+    const logosToDelete = pendingUploadedLogos;
+    setEditingSchool(null);
+    setForm(defaultForm);
+    setPendingUploadedLogos([]);
+    setFormOpen(false);
+
+    const cleanupResults = await Promise.allSettled(logosToDelete.map((logoUrl) => uploadService.deleteImage(logoUrl)));
+    const failedCleanup = cleanupResults.find((result) => result.status === "rejected");
+    if (failedCleanup) {
+      setError({ message: "The form was closed, but one uploaded logo could not be deleted from storage." });
     }
   }
 
@@ -212,7 +236,7 @@ export default function SchoolsPage() {
       </div>
 
       {formOpen ? (
-        <Modal title={editingSchool ? "Edit school" : "Add school"} onClose={() => { setEditingSchool(null); setForm(defaultForm); setFormOpen(false); }}>
+        <Modal title={editingSchool ? "Edit school" : "Add school"} onClose={() => void closeForm()}>
           <form onSubmit={(event) => void handleSubmit(event)} className="grid gap-4">
             <Field label="School Name">
               <input className={inputClass} value={form.schoolName} onChange={(event) => setForm({ ...form, schoolName: event.target.value })} required />
@@ -250,7 +274,7 @@ export default function SchoolsPage() {
               Opening hours are represented in the DTO but are not persisted by the current backend service yet.
             </p>
             <div className="flex justify-end gap-2">
-              <button type="button" className={secondaryButtonClass} onClick={() => { setEditingSchool(null); setForm(defaultForm); setFormOpen(false); }}>Cancel</button>
+              <button type="button" className={secondaryButtonClass} onClick={() => void closeForm()}>Cancel</button>
               <button type="submit" className={primaryButtonClass} disabled={submitting || uploadingLogo}>
                 {uploadingLogo ? "Uploading..." : submitting ? "Saving..." : "Save school"}
               </button>
