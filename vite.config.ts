@@ -18,4 +18,7 @@ export default defineConfig({
       "/api": "http://localhost:8080",
     },
   },
+  preview: {
+    allowedHosts: ["school-frontend-e8oa.onrender.com"]
+  }
 })
