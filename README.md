@@ -2,7 +2,7 @@
 
 ## Related Repository
 
-Backend repository: [school-backend](https://github.com/MayPyone/student-backend](https://github.com/MayPyone/school)
+Backend repository: [school-backend](https://github.com/MayPyone/student-backend)
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
