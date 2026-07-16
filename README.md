@@ -1,5 +1,9 @@
 # React + TypeScript + Vite
 
+## Related Repository
+
+Backend repository: [student-backend](https://github.com/MayPyone/student-backend)
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:
