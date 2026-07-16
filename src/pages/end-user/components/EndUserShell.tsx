@@ -1,4 +1,4 @@
-import { BookOpen, Calendar, Image, LogOut, School, Users } from "lucide-react";
+import { Calendar, Image, LogOut, School, Users } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { authService } from "../../../services/authService";
@@ -13,7 +13,6 @@ export interface EndUserOutletContext {
 }
 
 const navItems = [
-  { to: "/portal/lessons", label: "Lessons", icon: BookOpen },
   { to: "/portal/activities", label: "Activities", icon: Image },
   { to: "/portal/schedule", label: "Schedule", icon: Calendar },
   { to: "/portal/staff", label: "Staff", icon: Users },

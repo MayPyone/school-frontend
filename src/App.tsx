@@ -10,7 +10,6 @@ import SignupPage from "./pages/auth/SignupPage";
 import LessonPage from "./pages/lesson/LessonPage";
 import UnitDetailPage from "./pages/lesson/UnitDetailPage";
 import EndUserActivitiesPage from "./pages/end-user/EndUserActivitiesPage";
-import EndUserLessonsPage from "./pages/end-user/EndUserLessonsPage";
 import EndUserSchedulePage from "./pages/end-user/EndUserSchedulePage";
 import EndUserStaffPage from "./pages/end-user/EndUserStaffPage";
 import EndUserSchoolsPage from "./pages/end-user/EndUserSchoolsPage";
@@ -37,10 +36,6 @@ const pagePaths: Record<string, string> = {
   staff: "/staff",
   activities: "/activities",
 };
-
-function PortalLessonsRedirect() {
-  return <Navigate to="/portal/lessons" replace />;
-}
 
 function PortalScheduleRedirect() {
   return <Navigate to="/portal/schedule" replace />;
@@ -190,8 +185,8 @@ function App() {
       <Route element={<ProtectedRoute allowedRoles={["END_USER"]} redirectTo="/" />}>
         <Route path="/portal" element={<EndUserShell />}>
           <Route index element={<EndUserSchoolsPage />} />
-          <Route path="lesson" element={<PortalLessonsRedirect />} />
-          <Route path="lessons" element={<EndUserLessonsPage />} />
+          <Route path="lesson" element={<Navigate to="/portal" replace />} />
+          <Route path="lessons" element={<Navigate to="/portal" replace />} />
           <Route path="activities" element={<EndUserActivitiesPage />} />
           <Route path="schedules" element={<PortalScheduleRedirect />} />
           <Route path="schedule" element={<EndUserSchedulePage />} />

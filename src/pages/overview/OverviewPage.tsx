@@ -32,10 +32,12 @@ export default function OverviewPage() {
     ...schools.slice(0, 3).map((schoolItem) => ({
       label: schoolItem.schoolName,
       detail: schoolItem.schoolEmail ?? "School profile",
+      type: "school" as const,
     })),
     ...lessons.slice(0, 3).map((lesson) => ({
       label: lesson.title,
       detail: `${lesson.level} - ${lesson.category}`,
+      type: "lesson" as const,
     })),
   ].slice(0, 5);
 
@@ -77,7 +79,7 @@ export default function OverviewPage() {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-slate-900">{item.label}</p>
-                    <p className="text-xs text-slate-500">{item.detail}</p>
+                    <p className="text-xs text-slate-500">{item.type === "school" && item.detail !== "School profile" ? `Email: ${item.detail}` : item.detail}</p>
                   </div>
                 </div>
               ))
@@ -100,4 +102,3 @@ export default function OverviewPage() {
     </div>
   );
 }
-
