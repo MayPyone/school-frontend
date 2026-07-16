@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import { Edit2, Plus, RefreshCcw, Trash2 } from "lucide-react";
+import { Edit2, ExternalLink, ImagePlus, Plus, RefreshCcw, Trash2, X } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Modal } from "../../components/dashboard/Modal";
 import {
   Field,
@@ -99,6 +100,9 @@ export default function SchoolsPage({ loadSchools = schoolService.list }: School
 
     try {
       const payload = toPayload(form);
+      if (editingSchool && !form.logoUrl.trim()) {
+        payload.logoUrl = "";
+      }
       if (editingSchool) {
         await schoolService.update(editingSchool.id, payload);
       } else {
@@ -217,6 +221,9 @@ export default function SchoolsPage({ loadSchools = schoolService.list }: School
                 <p className="mt-1 text-sm text-slate-500">{school.subTitle || "No subtitle"}</p>
               </div>
               <div className="flex gap-1">
+                <Link className="rounded-md p-2 text-slate-500 hover:bg-slate-100" to={`/${school.customizeSchoolId}`} target="_blank" aria-label={`Open public page for ${school.schoolName}`}>
+                  <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                </Link>
                 <button type="button" className="rounded-md p-2 text-slate-500 hover:bg-slate-100" onClick={() => openEdit(school)} aria-label={`Edit ${school.schoolName}`}>
                   <Edit2 className="h-4 w-4" aria-hidden="true" />
                 </button>
@@ -253,15 +260,37 @@ export default function SchoolsPage({ loadSchools = schoolService.list }: School
               <textarea className={inputClass} rows={3} value={form.schoolAddress} onChange={(event) => setForm({ ...form, schoolAddress: event.target.value })} required />
             </Field>
             <div className="grid gap-4 md:grid-cols-2">
-              <Field label="Logo URL">
-                <input
-                  className={inputClass}
-                  type="file"
-                  accept="image/*"
-                  onChange={(event) => void handleLogoChange(event.target.files?.[0])}
-                  disabled={uploadingLogo}
-                />
-                {form.logoUrl ? <p className="mt-2 truncate text-xs text-slate-500">{form.logoUrl}</p> : null}
+              <Field label="Logo">
+                <div className="flex items-center gap-3">
+                  <label className={`${secondaryButtonClass} cursor-pointer`}>
+                    <ImagePlus className="h-4 w-4" aria-hidden="true" />
+                    {form.logoUrl ? "Replace logo" : "Upload logo"}
+                    <input
+                      className="sr-only"
+                      type="file"
+                      accept="image/*"
+                      onChange={(event) => void handleLogoChange(event.target.files?.[0])}
+                      disabled={uploadingLogo}
+                    />
+                  </label>
+                  {form.logoUrl ? (
+                    <button
+                      type="button"
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-950"
+                      onClick={() => setForm((current) => ({ ...current, logoUrl: "" }))}
+                      aria-label="Remove logo"
+                      title="Remove logo"
+                    >
+                      <X className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  ) : null}
+                </div>
+                {form.logoUrl ? (
+                  <div className="mt-3 flex items-center gap-3">
+                    <img className="h-14 w-14 rounded-md border border-slate-200 object-cover" src={form.logoUrl} alt="Selected school logo" />
+                    <p className="min-w-0 flex-1 truncate text-xs text-slate-500">{form.logoUrl}</p>
+                  </div>
+                ) : null}
               </Field>
               <Field label="Subtitle">
                 <input className={inputClass} value={form.subTitle} onChange={(event) => setForm({ ...form, subTitle: event.target.value })} />

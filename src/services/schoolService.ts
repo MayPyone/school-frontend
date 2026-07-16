@@ -7,6 +7,11 @@ export const schoolService = {
     return data;
   },
 
+  async get(id: UUID): Promise<School> {
+    const { data } = await api.get<School>(`/schools/${id}`);
+    return data;
+  },
+
   async create(payload: SchoolRequest): Promise<School> {
     const { data } = await api.post<School>("/schools", payload);
     return data;
@@ -21,4 +26,3 @@ export const schoolService = {
     await api.delete(`/schools/${id}`);
   },
 };
-

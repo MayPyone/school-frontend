@@ -32,7 +32,7 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
     editorProps: {
       attributes: {
         class:
-          "rich-text-content min-h-44 rounded-b-md border border-t-0 border-slate-300 bg-white px-3 py-3 text-sm text-slate-950 outline-none focus:ring-2 focus:ring-blue-100",
+          "rich-text-content min-h-44 max-h-[42vh] overflow-y-auto rounded-b-md border border-t-0 border-slate-300 bg-white px-3 py-3 text-sm text-slate-950 outline-none focus:ring-2 focus:ring-blue-100",
       },
     },
     onUpdate: ({ editor: currentEditor }) => {
@@ -54,7 +54,7 @@ export function RichTextEditor({ value, onChange }: RichTextEditorProps) {
 
   return (
     <div className="rounded-md shadow-sm">
-      <div className="flex flex-wrap gap-1 rounded-t-md border border-slate-300 bg-slate-50 p-2">
+      <div className="sticky top-0 z-10 flex flex-wrap gap-1 rounded-t-md border border-slate-300 bg-slate-50 p-2">
         <ToolbarButton label="Bold" active={editor.isActive("bold")} onClick={() => editor.chain().focus().toggleBold().run()}>
           <Bold className="h-4 w-4" aria-hidden="true" />
         </ToolbarButton>

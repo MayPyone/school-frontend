@@ -15,6 +15,20 @@ interface LocationState {
   from?: { pathname?: string };
 }
 
+function destinationForRole(role: string, requestedPath?: string | null) {
+  const defaultPath = role === "END_USER" ? "/portal/lessons" : "/";
+
+  if (!requestedPath?.startsWith("/")) {
+    return defaultPath;
+  }
+
+  if (role === "END_USER") {
+    return requestedPath.startsWith("/portal") ? requestedPath : defaultPath;
+  }
+
+  return requestedPath.startsWith("/portal") ? defaultPath : requestedPath;
+}
+
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -27,8 +41,9 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const message = error || (sessionExpired ? "Your session timed out. Please log in again." : "");
 
-  if (getStoredUser()) {
-    return <Navigate to="/" replace />;
+  const storedUser = getStoredUser();
+  if (storedUser) {
+    return <Navigate to={destinationForRole(storedUser.role, returnTo)} replace />;
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -37,9 +52,9 @@ export default function LoginPage() {
     setSubmitting(true);
 
     try {
-      await authService.login({ email, password });
+      const user = await authService.login({ email, password });
       const state = location.state as LocationState | null;
-      navigate(state?.from?.pathname ?? (returnTo?.startsWith("/") ? returnTo : "/"), { replace: true });
+      navigate(destinationForRole(user.role, state?.from?.pathname ?? returnTo), { replace: true });
     } catch (requestError) {
       setError(toApiError(requestError).message);
     } finally {
@@ -89,6 +104,9 @@ export default function LoginPage() {
           </button>
           <Link className={`w-full ${secondaryButtonClass}`} to="/signup">
             Create an account
+          </Link>
+          <Link className="text-center text-sm font-medium text-slate-600 hover:text-slate-950" to="/setup-admin">
+            Create first admin
           </Link>
         </div>
       </form>

@@ -10,6 +10,7 @@ export type DayOfWeek =
   | "SUNDAY";
 
 export type StaffRole = "ADMIN" | "TEACHER" | "ASSISTANT";
+export type UserRole = StaffRole | "END_USER";
 export type LessonCategory = "GRAMMAR" | "VOCAB" | "PRACTICE" | "GENERAL";
 export type ScheduleMode = "ONLINE" | "ONSITE";
 
@@ -30,7 +31,7 @@ export interface User {
   firstName: string;
   lastName: string;
   email: string;
-  role: StaffRole;
+  role: UserRole;
   password?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -42,6 +43,10 @@ export interface AuthResponse {
   user: User;
 }
 
+export interface SetupStatusResponse {
+  setupRequired: boolean;
+}
+
 export interface UserLoginRequest {
   email: string;
   password: string;
@@ -50,7 +55,7 @@ export interface UserLoginRequest {
 export interface UserRequest extends UserLoginRequest {
   firstName: string;
   lastName: string;
-  role: StaffRole;
+  role: UserRole;
 }
 
 export interface School {
@@ -62,6 +67,7 @@ export interface School {
   phoneNumbers?: string[];
   description?: string;
   subTitle?: string;
+  customizeSchoolId?: string;
   openingHours?: OpeningHourRequest[];
   createdAt?: string;
   updatedAt?: string;
@@ -76,6 +82,7 @@ export interface SchoolRequest {
   phoneNumbers: string[];
   description?: string;
   subTitle?: string;
+  customizeSchoolId?: string;
   openingHours?: OpeningHourRequest[];
 }
 

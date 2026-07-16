@@ -9,6 +9,11 @@ export const activityService = {
     return data;
   },
 
+  async listBySchool(schoolId: UUID): Promise<Activity[]> {
+    const { data } = await api.get<Activity[]>(`/schools/${schoolId}/activities`);
+    return data;
+  },
+
   async create(payload: Omit<Activity, "id">): Promise<Activity> {
     const { data } = await api.post<Activity>("/activities", payload);
     return data;

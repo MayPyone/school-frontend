@@ -9,6 +9,11 @@ export const scheduleService = {
     return data;
   },
 
+  async listBySchool(schoolId: UUID): Promise<ClassSchedule[]> {
+    const { data } = await api.get<ClassSchedule[]>(`/schools/${schoolId}/schedules`);
+    return data;
+  },
+
   async create(payload: ClassScheduleRequest): Promise<ClassSchedule> {
     const { data } = await api.post<ClassSchedule>("/schedules", payload);
     return data;

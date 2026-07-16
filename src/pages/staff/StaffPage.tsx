@@ -1,12 +1,13 @@
 import { useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, ShieldOff } from "lucide-react";
 import { Modal } from "../../components/dashboard/Modal";
 import {
   Badge,
   Field,
   PageHeader,
   Panel,
+  dangerButtonClass,
   inputClass,
   primaryButtonClass,
   secondaryButtonClass,
@@ -40,6 +41,7 @@ export default function StaffPage({ schools, selectedSchoolId }: StaffPageProps)
   const [form, setForm] = useState({ ...defaultForm, schoolId: selectedSchoolId });
   const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [revokingStaffId, setRevokingStaffId] = useState<UUID | null>(null);
 
   const staff = staffState.data ?? [];
   const currentSchool = useMemo(
@@ -47,8 +49,11 @@ export default function StaffPage({ schools, selectedSchoolId }: StaffPageProps)
     [schools, selectedSchoolId]
   );
   const filteredStaff = useMemo(
-    () => staff.filter((member) => `${member.firstName} ${member.lastName} ${member.email} ${member.role}`.toLowerCase().includes(query.toLowerCase())),
-    [query, staff]
+    () =>
+      staff
+        .filter((member) => !selectedSchoolId || member.schoolId === selectedSchoolId)
+        .filter((member) => `${member.firstName} ${member.lastName} ${member.email} ${member.role}`.toLowerCase().includes(query.toLowerCase())),
+    [query, selectedSchoolId, staff]
   );
 
   async function saveStaff(event: FormEvent<HTMLFormElement>) {
@@ -65,6 +70,23 @@ export default function StaffPage({ schools, selectedSchoolId }: StaffPageProps)
       setSubmitError(toApiError(requestError).message);
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function revokeStaff(member: StaffMember) {
+    const confirmed = window.confirm(`Revoke staff access for ${member.firstName} ${member.lastName}?`);
+    if (!confirmed) {
+      return;
+    }
+
+    setRevokingStaffId(member.id);
+    try {
+      await staffService.revoke(member.id);
+      await staffState.reload();
+    } catch (requestError) {
+      staffState.setError(toApiError(requestError));
+    } finally {
+      setRevokingStaffId(null);
     }
   }
 
@@ -119,6 +141,17 @@ export default function StaffPage({ schools, selectedSchoolId }: StaffPageProps)
                 <Badge tone={member.status === "ON_LEAVE" ? "yellow" : member.status === "INACTIVE" ? "red" : "green"}>{member.status ?? "ACTIVE"}</Badge>
               </div>
               <p className="mt-4 text-sm text-slate-600">{member.phone || "No phone"} {member.hireDate ? `- Hired ${member.hireDate}` : ""}</p>
+              <div className="mt-4 flex justify-end">
+                <button
+                  type="button"
+                  className={dangerButtonClass}
+                  onClick={() => void revokeStaff(member)}
+                  disabled={member.status === "INACTIVE" || revokingStaffId === member.id}
+                >
+                  <ShieldOff className="h-4 w-4" aria-hidden="true" />
+                  {revokingStaffId === member.id ? "Revoking..." : member.status === "INACTIVE" ? "Revoked" : "Revoke"}
+                </button>
+              </div>
             </Panel>
           ))}
         </div>

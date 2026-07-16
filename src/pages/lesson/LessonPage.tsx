@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import { ChevronDown, ChevronRight, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Edit2, Plus, Trash2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Modal } from "../../components/dashboard/Modal";
 import { RichTextEditor } from "../../components/dashboard/RichTextEditor";
 import {
@@ -25,6 +26,17 @@ const levels = [
   { id: 2, label: "Intermediate" },
   { id: 3, label: "Advanced" },
 ];
+const lessonTabs = ["All", "Basic", "Intermediate", "Advanced"] as const;
+type LessonTab = (typeof lessonTabs)[number];
+const categoryTabs = ["All", "GENERAL", "GRAMMAR", "VOCAB", "PRACTICE"] as const;
+type CategoryTab = (typeof categoryTabs)[number];
+const categoryLabels: Record<CategoryTab, string> = {
+  All: "All",
+  GENERAL: "General",
+  GRAMMAR: "Grammar",
+  VOCAB: "Vocab",
+  PRACTICE: "Practice",
+};
 
 const lessonFormDefaults = {
   title: "",
@@ -57,19 +69,36 @@ function RichContent({ html }: { html: string }) {
   return <div className="rich-text-content mt-2 text-sm text-slate-600" dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
+function plainTextFromHtml(html: string) {
+  if (!html) {
+    return "";
+  }
+
+  return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function levelIdFromLabel(level: string) {
+  return levels.find((item) => item.label === level)?.id ?? 1;
+}
+
 interface LessonPageProps {
   schools: School[];
   selectedSchoolId: UUID;
 }
 
 export default function LessonPage({ schools, selectedSchoolId }: LessonPageProps) {
+  const navigate = useNavigate();
   const [lessons, setLessons] = useState<LessonResponse[]>([]);
   const [unitsByLesson, setUnitsByLesson] = useState<Record<UUID, UnitResponse[]>>({});
   const [expandedLessonId, setExpandedLessonId] = useState<UUID | null>(null);
   const [lessonFormOpen, setLessonFormOpen] = useState(false);
+  const [editingLesson, setEditingLesson] = useState<LessonResponse | null>(null);
   const [unitLessonId, setUnitLessonId] = useState<UUID | null>(null);
+  const [editingUnit, setEditingUnit] = useState<UnitResponse | null>(null);
   const [lessonForm, setLessonForm] = useState(lessonFormDefaults);
   const [unitForm, setUnitForm] = useState(unitFormDefaults);
+  const [activeTab, setActiveTab] = useState<LessonTab>("All");
+  const [activeCategory, setActiveCategory] = useState<CategoryTab>("All");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -102,6 +131,83 @@ export default function LessonPage({ schools, selectedSchoolId }: LessonPageProp
     () => schools.find((school) => school.id === selectedSchoolId),
     [schools, selectedSchoolId]
   );
+  const levelFilteredLessons = useMemo(
+    () => lessons.filter((lesson) => activeTab === "All" || lesson.level === activeTab),
+    [activeTab, lessons]
+  );
+  const filteredLessons = useMemo(
+    () => levelFilteredLessons.filter((lesson) => activeCategory === "All" || lesson.category === activeCategory),
+    [activeCategory, levelFilteredLessons]
+  );
+  const categoryCounts = useMemo(
+    () =>
+      categoryTabs.reduce<Record<CategoryTab, number>>((counts, category) => {
+        return {
+          ...counts,
+          [category]:
+            category === "All"
+              ? levelFilteredLessons.length
+              : levelFilteredLessons.filter((lesson) => lesson.category === category).length,
+        };
+      }, {} as Record<CategoryTab, number>),
+    [levelFilteredLessons]
+  );
+
+  function selectTab(tab: LessonTab) {
+    setActiveTab(tab);
+    setActiveCategory("All");
+    setExpandedLessonId(null);
+  }
+
+  function selectCategory(category: CategoryTab) {
+    setActiveCategory(category);
+    setExpandedLessonId(null);
+  }
+
+  function openCreateLesson() {
+    setEditingLesson(null);
+    setLessonForm(lessonFormDefaults);
+    setLessonFormOpen(true);
+  }
+
+  function openEditLesson(lesson: LessonResponse) {
+    setEditingLesson(lesson);
+    setLessonForm({
+      title: lesson.title,
+      levelId: levelIdFromLabel(lesson.level),
+      content: lesson.content,
+      category: lesson.category,
+    });
+    setLessonFormOpen(true);
+  }
+
+  function closeLessonForm() {
+    setLessonFormOpen(false);
+    setEditingLesson(null);
+    setLessonForm(lessonFormDefaults);
+  }
+
+  function openCreateUnit(lessonId: UUID) {
+    setUnitLessonId(lessonId);
+    setEditingUnit(null);
+    setUnitForm(unitFormDefaults);
+  }
+
+  function openEditUnit(lessonId: UUID, unit: UnitResponse) {
+    setUnitLessonId(lessonId);
+    setEditingUnit(unit);
+    setUnitForm({
+      title: unit.title,
+      content: unit.content,
+      videoUrl: unit.videoUrl ?? "",
+    });
+  }
+
+  function closeUnitForm() {
+    setUnitLessonId(null);
+    setEditingUnit(null);
+    setUnitForm(unitFormDefaults);
+  }
 
   async function toggleUnits(lessonId: UUID) {
     if (expandedLessonId === lessonId) {
@@ -148,6 +254,27 @@ export default function LessonPage({ schools, selectedSchoolId }: LessonPageProp
     }
   }
 
+  async function saveLesson(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (editingLesson) {
+      setSubmitting(true);
+      setError("");
+      try {
+        const updated = await lessonService.update(editingLesson.schoolId, editingLesson.lessonId, lessonForm);
+        setLessons((current) => current.map((lesson) => (lesson.lessonId === updated.lessonId ? updated : lesson)));
+        closeLessonForm();
+      } catch (requestError) {
+        setError(toApiError(requestError).message);
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
+    await createLesson(event);
+  }
+
   async function createUnit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const user = getStoredUser();
@@ -161,14 +288,48 @@ export default function LessonPage({ schools, selectedSchoolId }: LessonPageProp
     try {
       const created = await unitService.create(unitLessonId, { ...unitForm, lessonId: unitLessonId, createdById: user.id });
       setUnitsByLesson((current) => ({ ...current, [unitLessonId]: [created, ...(current[unitLessonId] ?? [])] }));
-      setUnitForm(unitFormDefaults);
-      setUnitLessonId(null);
+      closeUnitForm();
       setExpandedLessonId(unitLessonId);
     } catch (requestError) {
       setError(toApiError(requestError).message);
     } finally {
       setSubmitting(false);
     }
+  }
+
+  async function saveUnit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const user = getStoredUser();
+    if (!user?.id || !unitLessonId) {
+      setError("A logged-in user and selected lesson are required to save units.");
+      return;
+    }
+
+    if (editingUnit) {
+      setSubmitting(true);
+      setError("");
+      try {
+        const updated = await unitService.update(unitLessonId, editingUnit.id, {
+          ...unitForm,
+          lessonId: unitLessonId,
+          createdById: editingUnit.createdById ?? user.id,
+          id: editingUnit.id,
+        });
+        setUnitsByLesson((current) => ({
+          ...current,
+          [unitLessonId]: (current[unitLessonId] ?? []).map((unit) => (unit.id === updated.id ? updated : unit)),
+        }));
+        closeUnitForm();
+        setExpandedLessonId(unitLessonId);
+      } catch (requestError) {
+        setError(toApiError(requestError).message);
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
+    await createUnit(event);
   }
 
   async function deleteLesson(lesson: LessonResponse) {
@@ -200,6 +361,10 @@ export default function LessonPage({ schools, selectedSchoolId }: LessonPageProp
     }
   }
 
+  function openUnitDetail(lessonId: UUID, unitId: UUID) {
+    navigate(`/lessons/${lessonId}/units/${unitId}`);
+  }
+
   return (
     <div>
       <PageHeader
@@ -210,7 +375,7 @@ export default function LessonPage({ schools, selectedSchoolId }: LessonPageProp
             : "Select or create a school before adding lessons."
         }
         actions={
-          <button type="button" className={primaryButtonClass} onClick={() => setLessonFormOpen(true)} disabled={!selectedSchoolId}>
+          <button type="button" className={primaryButtonClass} onClick={openCreateLesson} disabled={!selectedSchoolId}>
             <Plus className="h-4 w-4" aria-hidden="true" />
             Add Lesson
           </button>
@@ -223,8 +388,49 @@ export default function LessonPage({ schools, selectedSchoolId }: LessonPageProp
         <EmptyState title="No lessons found" description={currentSchool ? `Create the first lesson for ${currentSchool.schoolName}.` : "Create a school before adding lessons."} />
       ) : null}
 
+      {lessons.length ? (
+        <div className="mb-5 space-y-3">
+          <div className="flex flex-wrap gap-2">
+            {lessonTabs.map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
+                  activeTab === tab
+                    ? "border-slate-950 bg-slate-950 text-white dark:border-slate-50 dark:bg-slate-50 dark:text-slate-950"
+                    : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-900"
+                }`}
+                onClick={() => selectTab(tab)}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {categoryTabs.map((category) => (
+              <button
+                key={category}
+                type="button"
+                className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
+                  activeCategory === category
+                    ? "border-blue-700 bg-blue-700 text-white dark:border-blue-300 dark:bg-blue-300 dark:text-slate-950"
+                    : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-900"
+                }`}
+                onClick={() => selectCategory(category)}
+              >
+                {categoryLabels[category]} {categoryCounts[category] ?? 0}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {!loading && lessons.length > 0 && filteredLessons.length === 0 ? (
+        <EmptyState title="No lessons match these filters" description="Try another level or category tab, or add a lesson for this combination." />
+      ) : null}
+
       <div className="space-y-4">
-        {lessons.map((lesson) => {
+        {filteredLessons.map((lesson) => {
           const expanded = expandedLessonId === lesson.lessonId;
           const units = unitsByLesson[lesson.lessonId] ?? [];
 
@@ -246,7 +452,11 @@ export default function LessonPage({ schools, selectedSchoolId }: LessonPageProp
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button type="button" className={secondaryButtonClass} onClick={() => setUnitLessonId(lesson.lessonId)}>
+                  <button type="button" className={secondaryButtonClass} onClick={() => openEditLesson(lesson)}>
+                    <Edit2 className="h-4 w-4" aria-hidden="true" />
+                    Edit
+                  </button>
+                  <button type="button" className={secondaryButtonClass} onClick={() => openCreateUnit(lesson.lessonId)}>
                     <Plus className="h-4 w-4" aria-hidden="true" />
                     Add Unit
                   </button>
@@ -260,18 +470,29 @@ export default function LessonPage({ schools, selectedSchoolId }: LessonPageProp
               {expanded ? (
                 <div className="border-t border-slate-200 bg-slate-50 p-5">
                   {units.length ? (
-                    <div className="grid gap-3">
+                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                       {units.map((unit) => (
-                        <div key={unit.id} className="rounded-md border border-slate-200 bg-white p-4">
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <h3 className="font-medium text-slate-950">{unit.title}</h3>
-                              <RichContent html={unit.content} />
-                              {unit.videoUrl ? <p className="mt-2 text-xs text-blue-700">{unit.videoUrl}</p> : null}
+                        <div key={unit.id} className="flex min-h-44 flex-col rounded-md border border-slate-200 bg-white p-4 transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
+                          <button
+                            type="button"
+                            className="min-w-0 flex-1 text-left"
+                            onClick={() => openUnitDetail(lesson.lessonId, unit.id)}
+                          >
+                            <div className="min-w-0">
+                              <h3 className="truncate font-medium text-slate-950" title={unit.title}>{unit.title}</h3>
+                              <p className="mt-2 line-clamp-3 break-words text-sm text-slate-600">
+                                {plainTextFromHtml(unit.content) || "No content preview"}
+                              </p>
+                              {unit.videoUrl ? <p className="mt-2 truncate text-xs text-blue-700" title={unit.videoUrl}>{unit.videoUrl}</p> : null}
                             </div>
-                            <button type="button" className="rounded-md p-2 text-red-600 hover:bg-red-50" onClick={() => void deleteUnit(lesson.lessonId, unit)} aria-label={`Delete ${unit.title}`}>
-                              <Trash2 className="h-4 w-4" aria-hidden="true" />
-                            </button>
+                          </button>
+                          <div className="mt-4 flex justify-end gap-1 border-t border-slate-100 pt-3">
+                              <button type="button" className="rounded-md p-2 text-slate-500 hover:bg-slate-100" onClick={() => openEditUnit(lesson.lessonId, unit)} aria-label={`Edit ${unit.title}`}>
+                                <Edit2 className="h-4 w-4" aria-hidden="true" />
+                              </button>
+                              <button type="button" className="rounded-md p-2 text-red-600 hover:bg-red-50" onClick={() => void deleteUnit(lesson.lessonId, unit)} aria-label={`Delete ${unit.title}`}>
+                                <Trash2 className="h-4 w-4" aria-hidden="true" />
+                              </button>
                           </div>
                         </div>
                       ))}
@@ -287,8 +508,8 @@ export default function LessonPage({ schools, selectedSchoolId }: LessonPageProp
       </div>
 
       {lessonFormOpen ? (
-        <Modal title="Add lesson" onClose={() => setLessonFormOpen(false)}>
-          <form onSubmit={(event) => void createLesson(event)} className="grid gap-4">
+        <Modal title={editingLesson ? "Edit lesson" : "Add lesson"} onClose={closeLessonForm}>
+          <form onSubmit={(event) => void saveLesson(event)} className="grid gap-4">
             <Field label="School">
               <div className="min-h-10 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
                 <span className="block truncate" title={currentSchool?.schoolName ?? ""}>
@@ -315,16 +536,16 @@ export default function LessonPage({ schools, selectedSchoolId }: LessonPageProp
               <RichTextEditor value={lessonForm.content} onChange={(content) => setLessonForm({ ...lessonForm, content })} />
             </Field>
             <div className="flex justify-end gap-2">
-              <button type="button" className={secondaryButtonClass} onClick={() => setLessonFormOpen(false)}>Cancel</button>
-              <button type="submit" className={primaryButtonClass} disabled={submitting}>{submitting ? "Saving..." : "Save lesson"}</button>
+              <button type="button" className={secondaryButtonClass} onClick={closeLessonForm}>Cancel</button>
+              <button type="submit" className={primaryButtonClass} disabled={submitting}>{submitting ? "Saving..." : editingLesson ? "Update lesson" : "Save lesson"}</button>
             </div>
           </form>
         </Modal>
       ) : null}
 
       {unitLessonId ? (
-        <Modal title="Add unit" onClose={() => setUnitLessonId(null)}>
-          <form onSubmit={(event) => void createUnit(event)} className="grid gap-4">
+        <Modal title={editingUnit ? "Edit unit" : "Add unit"} onClose={closeUnitForm}>
+          <form onSubmit={(event) => void saveUnit(event)} className="grid gap-4">
             <Field label="Title">
               <input className={inputClass} value={unitForm.title} onChange={(event) => setUnitForm({ ...unitForm, title: event.target.value })} required />
             </Field>
@@ -335,8 +556,8 @@ export default function LessonPage({ schools, selectedSchoolId }: LessonPageProp
               <input className={inputClass} value={unitForm.videoUrl} onChange={(event) => setUnitForm({ ...unitForm, videoUrl: event.target.value })} />
             </Field>
             <div className="flex justify-end gap-2">
-              <button type="button" className={secondaryButtonClass} onClick={() => setUnitLessonId(null)}>Cancel</button>
-              <button type="submit" className={primaryButtonClass} disabled={submitting}>{submitting ? "Saving..." : "Save unit"}</button>
+              <button type="button" className={secondaryButtonClass} onClick={closeUnitForm}>Cancel</button>
+              <button type="submit" className={primaryButtonClass} disabled={submitting}>{submitting ? "Saving..." : editingUnit ? "Update unit" : "Save unit"}</button>
             </div>
           </form>
         </Modal>

@@ -9,6 +9,11 @@ export const staffService = {
     return data;
   },
 
+  async listBySchool(schoolId: UUID): Promise<StaffMember[]> {
+    const { data } = await api.get<StaffMember[]>(`/schools/${schoolId}/staff`);
+    return data;
+  },
+
   async create(payload: Omit<StaffMember, "id">): Promise<StaffMember> {
     const { data } = await api.post<StaffMember>("/staff", payload);
     return data;
@@ -16,6 +21,11 @@ export const staffService = {
 
   async update(id: UUID, payload: Partial<StaffMember>): Promise<StaffMember> {
     const { data } = await api.put<StaffMember>(`/staff/${id}`, payload);
+    return data;
+  },
+
+  async revoke(id: UUID): Promise<StaffMember> {
+    const { data } = await api.put<StaffMember>(`/staff/${id}/revoke`);
     return data;
   },
 

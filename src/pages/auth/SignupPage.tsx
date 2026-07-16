@@ -10,23 +10,20 @@ import {
 } from "../../components/dashboard/DashboardPrimitives";
 import { authService } from "../../services/authService";
 import { getStoredUser, toApiError } from "../../services/http";
-import type { StaffRole } from "../../types/api";
-
-const roles: StaffRole[] = ["ADMIN", "TEACHER", "ASSISTANT"];
 
 export default function SignupPage() {
   const navigate = useNavigate();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<StaffRole>("ADMIN");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  if (getStoredUser()) {
-    return <Navigate to="/" replace />;
+  const storedUser = getStoredUser();
+  if (storedUser) {
+    return <Navigate to={storedUser.role === "END_USER" ? "/portal/lessons" : "/"} replace />;
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -45,14 +42,14 @@ export default function SignupPage() {
 
     setSubmitting(true);
     try {
-      await authService.register({
+      const user = await authService.register({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         email: email.trim(),
-        role,
+        role: "END_USER",
         password,
       });
-      navigate("/", { replace: true });
+      navigate(user.role === "END_USER" ? "/portal/lessons" : "/", { replace: true });
     } catch (requestError) {
       setError(toApiError(requestError).message);
     } finally {
@@ -94,7 +91,7 @@ export default function SignupPage() {
           </Field>
         </div>
 
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
+        <div className="mt-4">
           <Field label="Email">
             <input
               className={inputClass}
@@ -103,15 +100,6 @@ export default function SignupPage() {
               onChange={(event) => setEmail(event.target.value)}
               required
             />
-          </Field>
-          <Field label="Role">
-            <select className={inputClass} value={role} onChange={(event) => setRole(event.target.value as StaffRole)}>
-              {roles.map((roleOption) => (
-                <option key={roleOption} value={roleOption}>
-                  {roleOption}
-                </option>
-              ))}
-            </select>
           </Field>
         </div>
 
@@ -148,4 +136,3 @@ export default function SignupPage() {
     </main>
   );
 }
-
