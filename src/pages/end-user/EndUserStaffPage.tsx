@@ -28,7 +28,7 @@ export default function EndUserStaffPage() {
       try {
         const loadedStaff = await staffService.listBySchool(selectedSchoolId);
         if (isMounted) {
-          setStaff(loadedStaff);
+          setStaff(loadedStaff.filter((member) => member.status === "ACTIVE"));
         }
       } catch (requestError) {
         if (isMounted) {

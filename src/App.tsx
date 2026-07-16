@@ -13,6 +13,7 @@ import EndUserActivitiesPage from "./pages/end-user/EndUserActivitiesPage";
 import EndUserLessonsPage from "./pages/end-user/EndUserLessonsPage";
 import EndUserSchedulePage from "./pages/end-user/EndUserSchedulePage";
 import EndUserStaffPage from "./pages/end-user/EndUserStaffPage";
+import EndUserSchoolsPage from "./pages/end-user/EndUserSchoolsPage";
 import EndUserShell from "./pages/end-user/components/EndUserShell";
 import OverviewPage from "./pages/overview/OverviewPage";
 import PublicSchoolPage from "./pages/public/PublicSchoolPage";
@@ -188,14 +189,14 @@ function App() {
       <Route path="/setup-admin" element={<SetupAdminPage />} />
       <Route element={<ProtectedRoute allowedRoles={["END_USER"]} redirectTo="/" />}>
         <Route path="/portal" element={<EndUserShell />}>
-          <Route index element={<PortalLessonsRedirect />} />
+          <Route index element={<EndUserSchoolsPage />} />
           <Route path="lesson" element={<PortalLessonsRedirect />} />
           <Route path="lessons" element={<EndUserLessonsPage />} />
           <Route path="activities" element={<EndUserActivitiesPage />} />
           <Route path="schedules" element={<PortalScheduleRedirect />} />
           <Route path="schedule" element={<EndUserSchedulePage />} />
           <Route path="staff" element={<EndUserStaffPage />} />
-          <Route path="*" element={<PortalLessonsRedirect />} />
+          <Route path="*" element={<Navigate to="/portal" replace />} />
         </Route>
       </Route>
       <Route element={<ProtectedRoute allowedRoles={["ADMIN", "TEACHER", "ASSISTANT"]} redirectTo="/portal/lessons" />}>

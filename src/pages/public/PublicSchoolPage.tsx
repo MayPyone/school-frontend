@@ -144,7 +144,9 @@ export default function PublicSchoolPage() {
         if (activePublicTab === "staff") {
           const loadedStaff = await staffService.listBySchool(customizeSchoolId);
           if (isMounted) {
-            setStaff(school?.id ? loadedStaff.filter((member) => member.schoolId === school.id) : loadedStaff);
+            setStaff(
+              loadedStaff.filter((member) => member.status === "ACTIVE" && (!school?.id || member.schoolId === school.id))
+            );
           }
         }
       } catch (requestError) {
