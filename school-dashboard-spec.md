@@ -22,7 +22,7 @@ This document maps the backend API endpoints to UI components and defines the de
 
 ### 1. Overview Dashboard
 
-**Route:** `/`  
+**Route:** `/backoffice`  
 **Component:** `Overview.tsx`
 
 **API Endpoints:**
@@ -36,21 +36,20 @@ This document maps the backend API endpoints to UI components and defines the de
   - Total Lessons
   - Active Staff Members
   - Scheduled Activities
-- **Quick Actions:** Links to create new entries
-- **Recent Activity Feed:** Latest updates across all entities
+- **Quick Actions:** Add school modal and links to create related entries
 
 **UI Components Needed:**
 - StatCard component (metric display)
 - QuickActionButton component
-- ActivityFeedItem component
+- Add school modal
 - Dashboard grid layout
 
 ---
 
 ### 2. Schools Management
 
-**Route:** `/schools`  
-**Component:** `Schools.tsx`
+**Route:** Removed from backoffice navigation. School creation is handled from `/backoffice`; editing remains in School Info.  
+**Component:** Overview add-school modal and `SchoolInfo.tsx`
 
 **API Endpoints:**
 
@@ -311,16 +310,18 @@ interface ClassSchedule {
 
 ### 6. Staff Management
 
-**Route:** `/staff`  
+**Route:** `/backoffice/admin/staff` for admin management, `/backoffice/staff` for read-only directory  
 **Component:** `Staff.tsx`
 
 **API Endpoints:**
 - **Note:** Based on database schema, this should map to `staff` table
 - Expected endpoints (to be confirmed with backend):
   - `GET /api/v1/staff`
-  - `POST /api/v1/staff`
-  - `PUT /api/v1/staff/{id}`
-  - `DELETE /api/v1/staff/{id}`
+  - `POST /api/v1/admin/staff` (admin only)
+  - `PUT /api/v1/admin/staff/{id}` (admin only)
+  - `PUT /api/v1/admin/staff/{id}/revoke` (admin only)
+  - `PUT /api/v1/admin/staff/{id}/restore` (admin only)
+  - `DELETE /api/v1/admin/staff/{id}` (admin only)
 
 **Data Model (from schema):**
 
@@ -332,7 +333,7 @@ interface Staff {
   lastName: string;
   email: string;
   phone: string;
-  role: 'TEACHER' | 'ADMIN' | 'COORDINATOR' | 'SUPPORT';
+  role: 'SUPER_ADMIN' | 'ADMIN' | 'TEACHER' | 'ASSISTANT';
   hireDate: string;
   status: 'ACTIVE' | 'INACTIVE' | 'ON_LEAVE';
   createdAt: string;

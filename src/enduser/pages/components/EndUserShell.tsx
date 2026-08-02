@@ -1,6 +1,7 @@
 import { Calendar, Image, LogOut, School, Users } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { resetDocumentBranding, setDocumentBranding } from "../../../lib/documentBranding";
 import { authService } from "../../../services/authService";
 import { getStoredUser } from "../../../services/http";
 import { schoolService } from "../../../services/schoolService";
@@ -56,6 +57,16 @@ export default function EndUserShell() {
 
   const selectedSchool = schools.find((school) => school.id === selectedSchoolId);
   const isPortalLanding = location.pathname === "/portal" || location.pathname === "/portal/";
+
+  useEffect(() => {
+    if (!isPortalLanding && selectedSchool) {
+      setDocumentBranding(selectedSchool.schoolName, selectedSchool.logoUrl);
+    } else {
+      setDocumentBranding("SchoolManager Portal");
+    }
+
+    return resetDocumentBranding;
+  }, [isPortalLanding, selectedSchool]);
 
   async function handleLogout() {
     await authService.logout();

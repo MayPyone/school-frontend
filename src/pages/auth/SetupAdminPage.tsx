@@ -49,7 +49,7 @@ export default function SetupAdminPage() {
   }, []);
 
   if (storedUser) {
-    return <Navigate to={storedUser.role === "END_USER" ? "/portal/lessons" : "/"} replace />;
+    return <Navigate to={storedUser.role === "END_USER" ? "/portal/lessons" : "/backoffice"} replace />;
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -74,7 +74,7 @@ export default function SetupAdminPage() {
         email: email.trim(),
         password,
       });
-      navigate("/", { replace: true });
+      navigate("/backoffice", { replace: true });
     } catch (requestError) {
       setError(toApiError(requestError).message);
     } finally {
@@ -90,7 +90,7 @@ export default function SetupAdminPage() {
             <ShieldCheck className="h-6 w-6" aria-hidden="true" />
           </div>
           <div>
-            <h1 className="text-xl font-semibold text-slate-950">Create first admin</h1>
+            <h1 className="text-xl font-semibold text-slate-950">Create first super admin</h1>
             <p className="text-sm text-slate-500">This setup panel closes after a staff account exists.</p>
           </div>
         </div>
@@ -135,7 +135,7 @@ export default function SetupAdminPage() {
                 Back to sign in
               </Link>
               <button type="submit" className={primaryButtonClass} disabled={submitting || setupRequired === null}>
-                {submitting ? "Creating admin..." : "Create admin"}
+                {submitting ? "Creating super admin..." : "Create super admin"}
               </button>
             </div>
           </>

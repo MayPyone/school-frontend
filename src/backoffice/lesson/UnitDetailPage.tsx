@@ -86,7 +86,7 @@ export default function UnitDetailPage({ schools }: UnitDetailPageProps) {
     <div>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <Link className={secondaryButtonClass} to="/lessons">
+          <Link className={secondaryButtonClass} to="/backoffice/lessons">
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             Back to lessons
           </Link>

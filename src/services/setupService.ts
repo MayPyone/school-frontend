@@ -10,7 +10,7 @@ export const setupService = {
   async createInitialAdmin(payload: Omit<UserRequest, "role">): Promise<User> {
     const { data } = await api.post<AuthResponse>("/setup/admin", {
       ...payload,
-      role: "ADMIN",
+      role: "SUPER_ADMIN",
     });
     storeAuth(data);
     return data.user;

@@ -3,6 +3,7 @@ import { ArrowLeft, ExternalLink, School as SchoolIcon } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { Badge, Panel, secondaryButtonClass } from "../../components/dashboard/DashboardPrimitives";
 import { ErrorState, LoadingState } from "../../components/dashboard/StatusViews";
+import { resetDocumentBranding, setDocumentBranding } from "../../lib/documentBranding";
 import { toApiError } from "../../services/http";
 import { lessonService } from "../../services/lessonService";
 import { schoolService } from "../../services/schoolService";
@@ -24,6 +25,14 @@ export default function PublicUnitDetailPage() {
   const [unit, setUnit] = useState<UnitResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<ApiError | null>(null);
+
+  useEffect(() => {
+    if (school) {
+      setDocumentBranding(unit ? `${unit.title} - ${school.schoolName}` : school.schoolName, school.logoUrl);
+    }
+
+    return resetDocumentBranding;
+  }, [school, unit]);
 
   useEffect(() => {
     let isMounted = true;

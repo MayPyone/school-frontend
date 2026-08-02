@@ -1,52 +1,65 @@
 import "./App.css";
 import { useCallback, useEffect, useState } from "react";
 import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import ActivityPage from "./backoffice/activity/ActivityPage";
+import LessonPage from "./backoffice/lesson/LessonPage";
+import UnitDetailPage from "./backoffice/lesson/UnitDetailPage";
+import OverviewPage from "./backoffice/overview/OverviewPage";
+import SchedulePage from "./backoffice/schedule/SchedulePage";
+import SchoolInfoPage from "./backoffice/schools/SchoolInfoPage";
+import StaffPage from "./backoffice/staff/StaffPage";
 import { ProtectedRoute } from "./components/dashboard/ProtectedRoute";
+import EndUserActivitiesPage from "./enduser/pages/EndUserActivitiesPage";
+import EndUserSchedulePage from "./enduser/pages/EndUserSchedulePage";
+import EndUserStaffPage from "./enduser/pages/EndUserStaffPage";
+import EndUserSchoolsPage from "./enduser/pages/EndUserSchoolsPage";
+import EndUserShell from "./enduser/pages/components/EndUserShell";
 import { RootLayout } from "./layout/RootLayout";
-import ActivityPage from "./pages/activity/ActivityPage";
+import { resetDocumentBranding, setDocumentBranding } from "./lib/documentBranding";
 import LoginPage from "./pages/auth/LoginPage";
 import SetupAdminPage from "./pages/auth/SetupAdminPage";
 import SignupPage from "./pages/auth/SignupPage";
-import LessonPage from "./pages/lesson/LessonPage";
-import UnitDetailPage from "./pages/lesson/UnitDetailPage";
-import EndUserActivitiesPage from "./pages/end-user/EndUserActivitiesPage";
-import EndUserSchedulePage from "./pages/end-user/EndUserSchedulePage";
-import EndUserStaffPage from "./pages/end-user/EndUserStaffPage";
-import EndUserSchoolsPage from "./pages/end-user/EndUserSchoolsPage";
-import EndUserShell from "./pages/end-user/components/EndUserShell";
-import OverviewPage from "./pages/overview/OverviewPage";
 import PublicSchoolPage from "./pages/public/PublicSchoolPage";
 import PublicUnitDetailPage from "./pages/public/PublicUnitDetailPage";
-import SchedulePage from "./pages/schedule/SchedulePage";
-import SchoolInfoPage from "./pages/schools/SchoolInfoPage";
-import SchoolsPage from "./pages/schools/SchoolsPage";
-import StaffPage from "./pages/staff/StaffPage";
 import { authService } from "./services/authService";
+import { getStoredUser } from "./services/http";
 import { schoolService } from "./services/schoolService";
 import type { School, UUID } from "./types/api";
 
 type ThemeMode = "light" | "dark";
 
-const pagePaths: Record<string, string> = {
-  overview: "/",
-  schoolInfo: "/school-info",
-  schools: "/schools",
-  lessons: "/lessons",
-  schedules: "/schedules",
-  staff: "/staff",
-  activities: "/activities",
-};
+const backofficeRoot = "/backoffice";
+
+function backofficePath(path = "") {
+  return path ? `${backofficeRoot}${path}` : backofficeRoot;
+}
+
+function getPagePaths(isAdmin: boolean): Record<string, string> {
+  return {
+    overview: backofficePath(),
+    schoolInfo: backofficePath("/school-info"),
+    lessons: backofficePath("/lessons"),
+    schedules: backofficePath("/schedules"),
+    staff: isAdmin ? backofficePath("/admin/staff") : backofficePath("/staff"),
+    activities: backofficePath("/activities"),
+  };
+}
 
 function PortalScheduleRedirect() {
   return <Navigate to="/portal/schedule" replace />;
 }
 
+function BackofficeRedirect() {
+  const location = useLocation();
+  return <Navigate to={`${backofficeRoot}${location.pathname}${location.search}${location.hash}`} replace />;
+}
+
 function LessonsRedirect() {
-  return <Navigate to="/lessons" replace />;
+  return <Navigate to={backofficePath("/lessons")} replace />;
 }
 
 function SchedulesRedirect() {
-  return <Navigate to="/schedules" replace />;
+  return <Navigate to={backofficePath("/schedules")} replace />;
 }
 
 interface DashboardShellProps {
@@ -57,6 +70,9 @@ interface DashboardShellProps {
 function DashboardShell({ theme, onThemeToggle }: DashboardShellProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const user = getStoredUser();
+  const isAdmin = user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
+  const pagePaths = getPagePaths(isAdmin);
   const [schools, setSchools] = useState<School[]>([]);
   const [selectedSchoolId, setSelectedSchoolId] = useState<UUID>("");
   const [schoolsLoading, setSchoolsLoading] = useState(true);
@@ -97,6 +113,17 @@ function DashboardShell({ theme, onThemeToggle }: DashboardShellProps) {
     void refreshSchools();
   }, [refreshSchools]);
 
+  useEffect(() => {
+    const selectedSchool = schools.find((school) => school.id === selectedSchoolId);
+    if (selectedSchool) {
+      setDocumentBranding(selectedSchool.schoolName, selectedSchool.logoUrl);
+    } else {
+      setDocumentBranding("SchoolManager Backoffice");
+    }
+
+    return resetDocumentBranding;
+  }, [schools, selectedSchoolId]);
+
   function handleSchoolChange(schoolId: UUID) {
     setSelectedSchoolId(schoolId);
     window.localStorage.setItem("school-dashboard-selected-school", schoolId);
@@ -109,33 +136,38 @@ function DashboardShell({ theme, onThemeToggle }: DashboardShellProps) {
 
   function renderCurrentPage() {
     const path = location.pathname;
+    const dashboardPath = path === backofficeRoot ? "/" : path.startsWith(`${backofficeRoot}/`) ? path.slice(backofficeRoot.length) : path;
 
-    if (path === "/") {
-      return <OverviewPage />;
+    if (dashboardPath === "/") {
+      return <OverviewPage onSchoolsChanged={refreshSchools} />;
     }
-    if (path === "/school-info") {
+    if (dashboardPath === "/school-info") {
       return <SchoolInfoPage schools={schools} selectedSchoolId={selectedSchoolId} loadSchools={refreshSchools} />;
     }
-    if (path === "/schools") {
-      return <SchoolsPage loadSchools={refreshSchools} />;
-    }
-    if (path.startsWith("/lessons/") && path.includes("/units/")) {
+    if (dashboardPath.startsWith("/lessons/") && dashboardPath.includes("/units/")) {
       return <UnitDetailPage schools={schools} />;
     }
-    if (path === "/lessons" || path.startsWith("/lessons/")) {
+    if (dashboardPath === "/lessons" || dashboardPath.startsWith("/lessons/")) {
       return <LessonPage schools={schools} selectedSchoolId={selectedSchoolId} />;
     }
-    if (path === "/schedules") {
+    if (dashboardPath === "/schedules") {
       return <SchedulePage selectedSchoolId={selectedSchoolId} />;
     }
-    if (path === "/staff") {
+    if (dashboardPath === "/admin/staff") {
+      return <StaffPage schools={schools} selectedSchoolId={selectedSchoolId} canManageStaff />;
+    }
+    if (dashboardPath === "/staff") {
+      if (isAdmin) {
+        return <Navigate to={backofficePath("/admin/staff")} replace />;
+      }
+
       return <StaffPage schools={schools} selectedSchoolId={selectedSchoolId} />;
     }
-    if (path === "/activities") {
+    if (dashboardPath === "/activities") {
       return <ActivityPage selectedSchoolId={selectedSchoolId} />;
     }
 
-    return <Navigate to="/" replace />;
+    return <Navigate to={backofficePath()} replace />;
   }
 
   return (
@@ -182,7 +214,7 @@ function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/setup-admin" element={<SetupAdminPage />} />
-      <Route element={<ProtectedRoute allowedRoles={["END_USER"]} redirectTo="/" />}>
+      <Route element={<ProtectedRoute allowedRoles={["END_USER"]} redirectTo={backofficePath()} />}>
         <Route path="/portal" element={<EndUserShell />}>
           <Route index element={<EndUserSchoolsPage />} />
           <Route path="lesson" element={<Navigate to="/portal" replace />} />
@@ -194,18 +226,33 @@ function App() {
           <Route path="*" element={<Navigate to="/portal" replace />} />
         </Route>
       </Route>
-      <Route element={<ProtectedRoute allowedRoles={["ADMIN", "TEACHER", "ASSISTANT"]} redirectTo="/portal/lessons" />}>
-        <Route index element={dashboardShell} />
-        <Route path="/school-info" element={dashboardShell} />
-        <Route path="/schools" element={dashboardShell} />
+      <Route element={<ProtectedRoute allowedRoles={["SUPER_ADMIN", "ADMIN", "TEACHER", "ASSISTANT"]} redirectTo="/portal/lessons" />}>
+        <Route index element={<Navigate to={backofficePath()} replace />} />
+        <Route path={backofficePath()} element={dashboardShell} />
+        <Route path={backofficePath("/school-info")} element={dashboardShell} />
+        <Route path={backofficePath("/schools")} element={<Navigate to={backofficePath()} replace />} />
+        <Route path={backofficePath("/lesson")} element={<LessonsRedirect />} />
+        <Route path={backofficePath("/lessons")} element={dashboardShell} />
+        <Route path={backofficePath("/lessons/:lessonId/units")} element={dashboardShell} />
+        <Route path={backofficePath("/lessons/:lessonId/units/:unitId")} element={dashboardShell} />
+        <Route path={backofficePath("/schedule")} element={<SchedulesRedirect />} />
+        <Route path={backofficePath("/schedules")} element={dashboardShell} />
+        <Route path={backofficePath("/staff")} element={dashboardShell} />
+        <Route path={backofficePath("/activities")} element={dashboardShell} />
+        <Route path="/school-info" element={<BackofficeRedirect />} />
+        <Route path="/schools" element={<Navigate to={backofficePath()} replace />} />
         <Route path="/lesson" element={<LessonsRedirect />} />
-        <Route path="/lessons" element={dashboardShell} />
-        <Route path="/lessons/:lessonId/units" element={dashboardShell} />
-        <Route path="/lessons/:lessonId/units/:unitId" element={dashboardShell} />
+        <Route path="/lessons" element={<BackofficeRedirect />} />
+        <Route path="/lessons/:lessonId/units" element={<BackofficeRedirect />} />
+        <Route path="/lessons/:lessonId/units/:unitId" element={<BackofficeRedirect />} />
         <Route path="/schedule" element={<SchedulesRedirect />} />
-        <Route path="/schedules" element={dashboardShell} />
-        <Route path="/staff" element={dashboardShell} />
-        <Route path="/activities" element={dashboardShell} />
+        <Route path="/schedules" element={<BackofficeRedirect />} />
+        <Route path="/staff" element={<BackofficeRedirect />} />
+        <Route path="/activities" element={<BackofficeRedirect />} />
+      </Route>
+      <Route element={<ProtectedRoute allowedRoles={["SUPER_ADMIN", "ADMIN"]} redirectTo={backofficePath("/staff")} />}>
+        <Route path={backofficePath("/admin/staff")} element={dashboardShell} />
+        <Route path="/admin/staff" element={<Navigate to={backofficePath("/admin/staff")} replace />} />
       </Route>
       <Route path="/public/schools/:customizeSchoolId" element={<PublicSchoolPage />} />
       <Route path="/public/schools/:customizeSchoolId/lessons/:lessonId/units/:unitId" element={<PublicUnitDetailPage />} />

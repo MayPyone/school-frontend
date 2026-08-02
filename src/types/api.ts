@@ -9,7 +9,7 @@ export type DayOfWeek =
   | "SATURDAY"
   | "SUNDAY";
 
-export type StaffRole = "ADMIN" | "TEACHER" | "ASSISTANT";
+export type StaffRole = "SUPER_ADMIN" | "ADMIN" | "TEACHER" | "ASSISTANT";
 export type UserRole = StaffRole | "END_USER";
 export type LessonCategory = "GRAMMAR" | "VOCAB" | "PRACTICE" | "GENERAL";
 export type ScheduleMode = "ONLINE" | "ONSITE";

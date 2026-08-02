@@ -16,7 +16,7 @@ interface LocationState {
 }
 
 function destinationForRole(role: string, requestedPath?: string | null) {
-  const defaultPath = role === "END_USER" ? "/portal/lessons" : "/";
+  const defaultPath = role === "END_USER" ? "/portal/lessons" : "/backoffice";
 
   if (!requestedPath?.startsWith("/")) {
     return defaultPath;
@@ -106,7 +106,7 @@ export default function LoginPage() {
             Create an account
           </Link>
           <Link className="text-center text-sm font-medium text-slate-600 hover:text-slate-950" to="/setup-admin">
-            Create first admin
+            Create first super admin
           </Link>
         </div>
       </form>

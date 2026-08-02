@@ -53,7 +53,6 @@ export function RootLayout({
   const menuItems = [
     { id: "overview", label: "Overview", icon: LayoutDashboard },
     { id: "schoolInfo", label: "School Info", icon: School },
-    { id: "schools", label: "Schools", icon: School },
     { id: "lessons", label: "Lessons", icon: BookOpen },
     { id: "schedules", label: "Class Schedules", icon: Calendar },
     { id: "staff", label: "Staff", icon: Users },

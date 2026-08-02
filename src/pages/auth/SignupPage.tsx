@@ -23,7 +23,7 @@ export default function SignupPage() {
 
   const storedUser = getStoredUser();
   if (storedUser) {
-    return <Navigate to={storedUser.role === "END_USER" ? "/portal/lessons" : "/"} replace />;
+    return <Navigate to={storedUser.role === "END_USER" ? "/portal/lessons" : "/backoffice"} replace />;
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -49,7 +49,7 @@ export default function SignupPage() {
         role: "END_USER",
         password,
       });
-      navigate(user.role === "END_USER" ? "/portal/lessons" : "/", { replace: true });
+      navigate(user.role === "END_USER" ? "/portal/lessons" : "/backoffice", { replace: true });
     } catch (requestError) {
       setError(toApiError(requestError).message);
     } finally {

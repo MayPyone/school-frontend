@@ -23,7 +23,6 @@ export function DashboardLayout({ children, currentPage, onNavigate }: Dashboard
 
   const menuItems = [
     { id: "overview", label: "Overview", icon: LayoutDashboard },
-    { id: "schools", label: "Schools", icon: School },
     { id: "lessons", label: "Lessons", icon: BookOpen },
     { id: "schedules", label: "Class Schedules", icon: Calendar },
     { id: "staff", label: "Staff", icon: Users },

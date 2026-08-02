@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import { Check, Copy, ExternalLink, ImagePlus, RefreshCcw, Save, X } from "lucide-react";
+import { Check, Copy, Download, ExternalLink, ImagePlus, Plus, RefreshCcw, Save, Upload, X } from "lucide-react";
 import { Link } from "react-router-dom";
+import { Modal } from "../../components/dashboard/Modal";
 import {
   Field,
   PageHeader,
@@ -11,10 +12,10 @@ import {
   secondaryButtonClass,
 } from "../../components/dashboard/DashboardPrimitives";
 import { EmptyState, ErrorState } from "../../components/dashboard/StatusViews";
-import { toApiError } from "../../services/http";
+import { getStoredUser, toApiError } from "../../services/http";
 import { schoolService } from "../../services/schoolService";
 import { uploadService } from "../../services/uploadService";
-import type { ApiError, School, SchoolUpdate, UUID } from "../../types/api";
+import type { ApiError, School, SchoolRequest, SchoolUpdate, UUID } from "../../types/api";
 
 const defaultForm = {
   schoolName: "",
@@ -56,6 +57,29 @@ function toPayload(form: SchoolInfoForm): SchoolUpdate {
   };
 }
 
+function toCreatePayload(form: SchoolInfoForm): Omit<SchoolRequest, "userId"> {
+  return {
+    schoolName: form.schoolName.trim(),
+    schoolEmail: form.schoolEmail.trim() || undefined,
+    schoolAddress: form.schoolAddress.split("\n").map((item) => item.trim()).filter(Boolean),
+    logoUrl: form.logoUrl.trim() || undefined,
+    phoneNumbers: form.phoneNumbers.split(",").map((item) => item.trim()).filter(Boolean),
+    description: form.description.trim() || undefined,
+    subTitle: form.subTitle.trim() || undefined,
+    customizeSchoolId: form.customizeSchoolId.trim() || undefined,
+    openingHours: [],
+  };
+}
+
+function exportFilename(school: School) {
+  const slug = (school.customizeSchoolId || school.schoolName || "school")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return `${slug || "school"}-data.zip`;
+}
+
 interface SchoolInfoPageProps {
   schools: School[];
   selectedSchoolId: UUID;
@@ -68,7 +92,11 @@ export default function SchoolInfoPage({ schools, selectedSchoolId, loadSchools 
     [schools, selectedSchoolId]
   );
   const [form, setForm] = useState(defaultForm);
+  const [createForm, setCreateForm] = useState(defaultForm);
+  const [createOpen, setCreateOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
   const [copied, setCopied] = useState(false);
@@ -81,6 +109,7 @@ export default function SchoolInfoPage({ schools, selectedSchoolId, loadSchools 
 
   const sharePath = selectedSchool?.customizeSchoolId ? `/${selectedSchool.customizeSchoolId}` : "";
   const shareUrl = selectedSchool ? `${window.location.origin}${sharePath}` : "";
+  const canImportExport = getStoredUser()?.role === "SUPER_ADMIN";
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -99,6 +128,69 @@ export default function SchoolInfoPage({ schools, selectedSchoolId, loadSchools 
     } finally {
       setSubmitting(false);
     }
+  }
+
+  async function handleCreate(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setCreating(true);
+    setError(null);
+
+    try {
+      const user = getStoredUser();
+      if (!user?.id) {
+        throw new Error("A logged-in user is required to create a school.");
+      }
+
+      await schoolService.create({ ...toCreatePayload(createForm), userId: user.id });
+      setCreateForm(defaultForm);
+      setCreateOpen(false);
+      await loadSchools();
+    } catch (requestError) {
+      setError(toApiError(requestError));
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function handleImport(file: File | undefined) {
+    if (!file) {
+      return;
+    }
+
+    setImporting(true);
+    setError(null);
+
+    try {
+      if (!selectedSchool) {
+        throw new Error("Select a school before importing. Import overwrites the current school.");
+      }
+
+      await schoolService.importData(selectedSchool.id, file);
+      await loadSchools();
+    } catch (requestError) {
+      setError(toApiError(requestError));
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  function handleExport() {
+    if (!selectedSchool) {
+      return;
+    }
+
+    schoolService.exportData(selectedSchool.id)
+      .then((archive) => {
+        const url = URL.createObjectURL(archive);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = exportFilename(selectedSchool);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+      })
+      .catch((requestError) => setError(toApiError(requestError)));
   }
 
   async function handleLogoChange(file: File | undefined) {
@@ -141,10 +233,35 @@ export default function SchoolInfoPage({ schools, selectedSchoolId, loadSchools 
         title="School Info"
         description="Update the selected school's public profile and share its landing page."
         actions={
-          <button type="button" className={secondaryButtonClass} onClick={() => void loadSchools()}>
-            <RefreshCcw className="h-4 w-4" aria-hidden="true" />
-            Refresh
-          </button>
+          <>
+            <button type="button" className={primaryButtonClass} onClick={() => setCreateOpen(true)}>
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              Create
+            </button>
+            {canImportExport ? (
+              <>
+                <label className={`${secondaryButtonClass} cursor-pointer`}>
+                  <Upload className="h-4 w-4" aria-hidden="true" />
+                  {importing ? "Importing..." : "Import"}
+                  <input
+                    className="sr-only"
+                    type="file"
+                    accept=".zip,.json,application/zip,application/json"
+                    onChange={(event) => void handleImport(event.target.files?.[0])}
+                    disabled={importing || !selectedSchool}
+                  />
+                </label>
+                <button type="button" className={secondaryButtonClass} onClick={handleExport} disabled={!selectedSchool}>
+                  <Download className="h-4 w-4" aria-hidden="true" />
+                  Export
+                </button>
+              </>
+            ) : null}
+            <button type="button" className={secondaryButtonClass} onClick={() => void loadSchools()}>
+              <RefreshCcw className="h-4 w-4" aria-hidden="true" />
+              Refresh
+            </button>
+          </>
         }
       />
 
@@ -198,7 +315,7 @@ export default function SchoolInfoPage({ schools, selectedSchoolId, loadSchools 
                   {form.logoUrl ? (
                     <div className="mt-3 flex min-w-0 items-center gap-3">
                       <img className="h-14 w-14 shrink-0 rounded-md border border-slate-200 object-cover dark:border-slate-800" src={form.logoUrl} alt="Selected school logo" />
-                      <p className="min-w-0 flex-1 truncate text-xs text-slate-500 dark:text-slate-400">{form.logoUrl}</p>
+                      {/* <p className="min-w-0 flex-1 truncate text-xs text-slate-500 dark:text-slate-400">{form.logoUrl}</p> */}
                     </div>
                   ) : null}
                 </Field>
@@ -251,6 +368,44 @@ export default function SchoolInfoPage({ schools, selectedSchoolId, loadSchools 
           </Panel>
         </div>
       )}
+
+      {createOpen ? (
+        <Modal title="Create school" onClose={() => setCreateOpen(false)}>
+          <form onSubmit={(event) => void handleCreate(event)} className="grid gap-4">
+            <Field label="School Name">
+              <input className={inputClass} value={createForm.schoolName} onChange={(event) => setCreateForm({ ...createForm, schoolName: event.target.value })} required />
+            </Field>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Email">
+                <input className={inputClass} type="email" value={createForm.schoolEmail} onChange={(event) => setCreateForm({ ...createForm, schoolEmail: event.target.value })} />
+              </Field>
+              <Field label="Phone Numbers">
+                <input className={inputClass} value={createForm.phoneNumbers} onChange={(event) => setCreateForm({ ...createForm, phoneNumbers: event.target.value })} placeholder="+1-555-0100, +1-555-0101" />
+              </Field>
+            </div>
+            <Field label="Address">
+              <textarea className={inputClass} rows={3} value={createForm.schoolAddress} onChange={(event) => setCreateForm({ ...createForm, schoolAddress: event.target.value })} required />
+            </Field>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Subtitle">
+                <input className={inputClass} value={createForm.subTitle} onChange={(event) => setCreateForm({ ...createForm, subTitle: event.target.value })} />
+              </Field>
+              <Field label="Customize School ID">
+                <input className={inputClass} value={createForm.customizeSchoolId} onChange={(event) => setCreateForm({ ...createForm, customizeSchoolId: event.target.value })} placeholder="my-school" required />
+              </Field>
+            </div>
+            <Field label="Description">
+              <textarea className={inputClass} rows={4} value={createForm.description} onChange={(event) => setCreateForm({ ...createForm, description: event.target.value })} />
+            </Field>
+            <div className="flex justify-end gap-2">
+              <button type="button" className={secondaryButtonClass} onClick={() => setCreateOpen(false)}>Cancel</button>
+              <button type="submit" className={primaryButtonClass} disabled={creating}>
+                {creating ? "Creating..." : "Create"}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      ) : null}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import { Plus, Search, ShieldOff } from "lucide-react";
+import { Plus, Search, ShieldCheck, ShieldOff } from "lucide-react";
 import { Modal } from "../../components/dashboard/Modal";
 import {
   Badge,
@@ -15,7 +15,7 @@ import {
 import { EmptyState, ErrorState, LoadingState } from "../../components/dashboard/StatusViews";
 import { useAsyncData } from "../../hooks/useAsyncData";
 import { staffService } from "../../services/staffService";
-import { toApiError } from "../../services/http";
+import { getStoredUser, toApiError } from "../../services/http";
 import type { School, StaffMember, StaffRole, UUID } from "../../types/api";
 
 const defaultForm = {
@@ -32,16 +32,20 @@ const defaultForm = {
 interface StaffPageProps {
   schools: School[];
   selectedSchoolId: UUID;
+  canManageStaff?: boolean;
 }
 
-export default function StaffPage({ schools, selectedSchoolId }: StaffPageProps) {
+export default function StaffPage({ schools, selectedSchoolId, canManageStaff = false }: StaffPageProps) {
   const staffState = useAsyncData(() => staffService.list(), []);
+  const currentUser = getStoredUser();
+  const canManageAdminRoles = currentUser?.role === "SUPER_ADMIN";
   const [query, setQuery] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState({ ...defaultForm, schoolId: selectedSchoolId });
   const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [revokingStaffId, setRevokingStaffId] = useState<UUID | null>(null);
+  const [restoringStaffId, setRestoringStaffId] = useState<UUID | null>(null);
 
   const staff = staffState.data ?? [];
   const currentSchool = useMemo(
@@ -55,6 +59,22 @@ export default function StaffPage({ schools, selectedSchoolId }: StaffPageProps)
         .filter((member) => `${member.firstName} ${member.lastName} ${member.email} ${member.role}`.toLowerCase().includes(query.toLowerCase())),
     [query, selectedSchoolId, staff]
   );
+  const roleOptions: Array<{ value: StaffRole; label: string }> = [
+    ...(canManageAdminRoles ? [
+      { value: "SUPER_ADMIN" as StaffRole, label: "Super Admin" },
+      { value: "ADMIN" as StaffRole, label: "Admin" },
+    ] : []),
+    { value: "TEACHER", label: "Teacher" },
+    { value: "ASSISTANT", label: "Assistant" },
+  ];
+
+  function canChangeAccess(member: StaffMember) {
+    if (member.role === "SUPER_ADMIN") {
+      return false;
+    }
+
+    return member.role !== "ADMIN" || canManageAdminRoles;
+  }
 
   async function saveStaff(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -90,12 +110,29 @@ export default function StaffPage({ schools, selectedSchoolId }: StaffPageProps)
     }
   }
 
+  async function restoreStaff(member: StaffMember) {
+    const confirmed = window.confirm(`Restore staff access for ${member.firstName} ${member.lastName}?`);
+    if (!confirmed) {
+      return;
+    }
+
+    setRestoringStaffId(member.id);
+    try {
+      await staffService.restore(member.id);
+      await staffState.reload();
+    } catch (requestError) {
+      staffState.setError(toApiError(requestError));
+    } finally {
+      setRestoringStaffId(null);
+    }
+  }
+
   return (
     <div>
       <PageHeader
         title="Staff"
-        description="Search, filter, and manage staff records by role and status."
-        actions={
+        description={canManageStaff ? "Search, filter, and manage staff records by role and status." : "Search and filter staff records by role and status."}
+        actions={canManageStaff ? (
           <button
             type="button"
             className={primaryButtonClass}
@@ -108,7 +145,7 @@ export default function StaffPage({ schools, selectedSchoolId }: StaffPageProps)
             <Plus className="h-4 w-4" aria-hidden="true" />
             Add Staff
           </button>
-        }
+        ) : null}
       />
 
       {staffState.loading ? <LoadingState label="Checking staff endpoints" /> : null}
@@ -137,27 +174,41 @@ export default function StaffPage({ schools, selectedSchoolId }: StaffPageProps)
                 </div>
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
-                <Badge tone={member.role === "ADMIN" ? "blue" : "green"}>{member.role}</Badge>
+                <Badge tone={member.role === "SUPER_ADMIN" || member.role === "ADMIN" ? "blue" : "green"}>{member.role}</Badge>
                 <Badge tone={member.status === "ON_LEAVE" ? "yellow" : member.status === "INACTIVE" ? "red" : "green"}>{member.status ?? "ACTIVE"}</Badge>
               </div>
               <p className="mt-4 text-sm text-slate-600">{member.phone || "No phone"} {member.hireDate ? `- Hired ${member.hireDate}` : ""}</p>
-              <div className="mt-4 flex justify-end">
-                <button
-                  type="button"
-                  className={dangerButtonClass}
-                  onClick={() => void revokeStaff(member)}
-                  disabled={member.status === "INACTIVE" || revokingStaffId === member.id}
-                >
-                  <ShieldOff className="h-4 w-4" aria-hidden="true" />
-                  {revokingStaffId === member.id ? "Revoking..." : member.status === "INACTIVE" ? "Revoked" : "Revoke"}
-                </button>
-              </div>
+              {canManageStaff && canChangeAccess(member) ? (
+                <div className="mt-4 flex justify-end">
+                  {member.status === "INACTIVE" ? (
+                    <button
+                      type="button"
+                      className={secondaryButtonClass}
+                      onClick={() => void restoreStaff(member)}
+                      disabled={restoringStaffId === member.id}
+                    >
+                      <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+                      {restoringStaffId === member.id ? "Restoring..." : "Unrevoke"}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className={dangerButtonClass}
+                      onClick={() => void revokeStaff(member)}
+                      disabled={revokingStaffId === member.id}
+                    >
+                      <ShieldOff className="h-4 w-4" aria-hidden="true" />
+                      {revokingStaffId === member.id ? "Revoking..." : "Revoke"}
+                    </button>
+                  )}
+                </div>
+              ) : null}
             </Panel>
           ))}
         </div>
       )}
 
-      {formOpen ? (
+      {formOpen && canManageStaff ? (
         <Modal title="Add staff" onClose={() => setFormOpen(false)}>
           <form onSubmit={saveStaff} className="grid gap-4">
             {submitError ? <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">{submitError}</p> : null}
@@ -187,9 +238,9 @@ export default function StaffPage({ schools, selectedSchoolId }: StaffPageProps)
             <div className="grid gap-4 md:grid-cols-3">
               <Field label="Role">
                 <select className={inputClass} value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value as StaffRole })}>
-                  <option value="ADMIN">Admin</option>
-                  <option value="TEACHER">Teacher</option>
-                  <option value="ASSISTANT">Assistant</option>
+                  {roleOptions.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
                 </select>
               </Field>
               <Field label="Status">

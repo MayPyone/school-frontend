@@ -3,6 +3,7 @@ import { BookOpen, Calendar, ChevronDown, ChevronRight, Clock, GraduationCap, Ma
 import { Link, useParams } from "react-router-dom";
 import { Badge, Panel, secondaryButtonClass } from "../../components/dashboard/DashboardPrimitives";
 import { EmptyState, ErrorState, LoadingState } from "../../components/dashboard/StatusViews";
+import { resetDocumentBranding, setDocumentBranding } from "../../lib/documentBranding";
 import { lessonService } from "../../services/lessonService";
 import { scheduleService } from "../../services/scheduleService";
 import { schoolService } from "../../services/schoolService";
@@ -70,6 +71,14 @@ export default function PublicSchoolPage() {
   const [error, setError] = useState<ApiError | null>(null);
 
   const activePublicTab = publicTabs.some((tab) => tab.id === publicTab) ? (publicTab as PublicTab) : "about";
+
+  useEffect(() => {
+    if (school) {
+      setDocumentBranding(school.schoolName, school.logoUrl);
+    }
+
+    return resetDocumentBranding;
+  }, [school]);
 
   useEffect(() => {
     let isMounted = true;

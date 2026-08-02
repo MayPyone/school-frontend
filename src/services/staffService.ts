@@ -15,21 +15,26 @@ export const staffService = {
   },
 
   async create(payload: Omit<StaffMember, "id">): Promise<StaffMember> {
-    const { data } = await api.post<StaffMember>("/staff", payload);
+    const { data } = await api.post<StaffMember>("/admin/staff", payload);
     return data;
   },
 
   async update(id: UUID, payload: Partial<StaffMember>): Promise<StaffMember> {
-    const { data } = await api.put<StaffMember>(`/staff/${id}`, payload);
+    const { data } = await api.put<StaffMember>(`/admin/staff/${id}`, payload);
     return data;
   },
 
   async revoke(id: UUID): Promise<StaffMember> {
-    const { data } = await api.put<StaffMember>(`/staff/${id}/revoke`);
+    const { data } = await api.put<StaffMember>(`/admin/staff/${id}/revoke`);
+    return data;
+  },
+
+  async restore(id: UUID): Promise<StaffMember> {
+    const { data } = await api.put<StaffMember>(`/admin/staff/${id}/restore`);
     return data;
   },
 
   async remove(id: UUID): Promise<void> {
-    await api.delete(`/staff/${id}`);
+    await api.delete(`/admin/staff/${id}`);
   },
 };
